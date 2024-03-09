@@ -1,6 +1,7 @@
 #!/bin/bash
 set -e
 
+export DEBIAN_FRONTEND=noninteractive
 apt-get update && \
     apt-get install -y \
         make \
@@ -12,12 +13,10 @@ apt-get update && \
 	lsb-release \
 	software-properties-common
 
-(
-    wget https://apt.llvm.org/llvm.sh
-    chmod +x llvm.sh
-    ./llvm.sh 17
-    rm -f llvm.sh
-)
+wget https://apt.llvm.org/llvm.sh
+chmod +x llvm.sh
+./llvm.sh 17
+rm -f llvm.sh
 
 update-alternatives \
   --install /usr/lib/llvm              llvm             /usr/lib/llvm-17  20 \

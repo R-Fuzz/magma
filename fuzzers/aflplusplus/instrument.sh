@@ -10,19 +10,25 @@ set -e
 # - env CFLAGS and CXXFLAGS must be set to link against Magma instrumentation
 ##
 
+export AFL_PATH="$FUZZER/repo/"
 export CC="$FUZZER/repo/afl-clang-fast"
 export CXX="$FUZZER/repo/afl-clang-fast++"
 export AS="llvm-as"
+export AR="llvm-ar"
+export RANLIB="llvm-ranlib"
 
-export LIBS="$LIBS -lc++ -lc++abi $FUZZER/repo/utils/aflpp_driver/libAFLDriver.a"
-
-# AFL++'s driver is compiled against libc++
-export CXXFLAGS="$CXXFLAGS -stdlib=libc++"
+export LIBS="$LIBS $FUZZER/repo/utils/aflpp_driver/libAFLDriver.a"
+export CFLAGS="$CFLAGS -fsanitize=address"
+export CXXFLAGS="$CXXFLAGS -fsanitize=address -stdlib=libstdc++"
+export LDFLAGS="$LDFLAGS -fsanitize=address"
 
 # Build the AFL-only instrumented version
 (
     export OUT="$OUT/afl"
     export LDFLAGS="$LDFLAGS -L$OUT"
+
+    export AFL_LLVM_DICT2FILE="$OUT/afl++.dict"
+    export AFL_LLVM_DICT2FILE_NO_MAIN="1"
 
     "$MAGMA/build.sh"
     "$TARGET/build.sh"
@@ -33,7 +39,6 @@ export CXXFLAGS="$CXXFLAGS -stdlib=libc++"
 (
     export OUT="$OUT/cmplog"
     export LDFLAGS="$LDFLAGS -L$OUT"
-    # export CFLAGS="$CFLAGS -DMAGMA_DISABLE_CANARIES"
 
     export AFL_LLVM_CMPLOG=1
 
