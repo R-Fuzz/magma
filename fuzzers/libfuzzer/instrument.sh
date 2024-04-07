@@ -15,7 +15,7 @@ export CXX="clang++"
 
 export CFLAGS="$CFLAGS -fsanitize=fuzzer-no-link"
 export CXXFLAGS="$CXXFLAGS -fsanitize=fuzzer-no-link"
-export LDFLAGS="$LDFLAGS -fsanitize=fuzzer-no-link"
+#export LDFLAGS="$LDFLAGS -fsanitize=fuzzer"
 
 export LIBS="$LIBS -l:driver.o $OUT/libFuzzer.a -lstdc++"
 

@@ -11,16 +11,14 @@ set -e
 ##
 
 export AFL_PATH="$FUZZER/repo/"
-export CC="$FUZZER/repo/afl-clang-fast"
-export CXX="$FUZZER/repo/afl-clang-fast++"
+export CC="$FUZZER/repo/afl-cc"
+export CXX="$FUZZER/repo/afl-c++"
 export AS="llvm-as"
 export AR="llvm-ar"
 export RANLIB="llvm-ranlib"
 
 export LIBS="$LIBS $FUZZER/repo/utils/aflpp_driver/libAFLDriver.a"
-export CFLAGS="$CFLAGS -fsanitize=address"
-export CXXFLAGS="$CXXFLAGS -fsanitize=address -stdlib=libstdc++"
-export LDFLAGS="$LDFLAGS -fsanitize=address"
+export CXXFLAGS="$CXXFLAGS -stdlib=libstdc++"
 
 # Build the AFL-only instrumented version
 (

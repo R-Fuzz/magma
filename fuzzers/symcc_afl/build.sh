@@ -19,19 +19,6 @@ fi
     CC=clang make -j $(nproc) -C llvm_mode
 )
 
-# build Z3
-(
-    cd "$FUZZER/z3"
-    mkdir -p build install cmake_conf
-    cd build
-    CXX=clang++ CC=clang cmake ../ \
-        -DCMAKE_INSTALL_PREFIX="$FUZZER/z3/install" \
-        -DCMAKE_INSTALL_Z3_CMAKE_PACKAGE_DIR="$FUZZER/z3/cmake_conf" \
-        -G Ninja
-    cmake --build .
-    cmake --build . --target install
-)
-
 # build SymCC
 (
     cd "$FUZZER/symcc"
@@ -40,7 +27,9 @@ fi
     mkdir -p build
     pushd build
     cmake -G Ninja ../ \
+	-DCMAKE_BUILD_TYPE=RelWithDebInfo \
         -DQSYM_BACKEND=ON \
+	-DZ3_TRUST_SYSTEM_VERSION=On \
         -DZ3_DIR="$FUZZER/z3/cmake_conf"
     ninja
     popd
