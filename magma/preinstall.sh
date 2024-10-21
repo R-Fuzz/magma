@@ -2,4 +2,4 @@
 set -e
 
 apt-get update && \
-    apt-get install -y make build-essential daemontools
+    apt-get install -y make build-essential daemontools apt-utils

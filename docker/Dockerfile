@@ -1,4 +1,4 @@
-FROM ubuntu:18.04
+FROM ubuntu:22.04
 
 # TODO remove sudo for user "magma" to avoid unwanted priv escalation from
 # other attack vectors.
