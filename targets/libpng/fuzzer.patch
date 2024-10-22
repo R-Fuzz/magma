@@ -1,0 +1,12 @@
+diff --git a/contrib/oss-fuzz/libpng_read_fuzzer.cc b/contrib/oss-fuzz/libpng_read_fuzzer.cc
+index 2064a8486..c8ff57692 100644
+--- a/contrib/oss-fuzz/libpng_read_fuzzer.cc
++++ b/contrib/oss-fuzz/libpng_read_fuzzer.cc
+@@ -15,6 +15,7 @@
+ // 4. adding read_end_info() and creating an end_info structure.
+ // 5. adding calls to png_set_*() transforms commonly used by browsers.
+
++#include <stdlib.h>
+ #include <stddef.h>
+ #include <stdint.h>
+ #include <string.h>
