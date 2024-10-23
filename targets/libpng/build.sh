@@ -23,6 +23,8 @@ make -j$(nproc) libpng16.la
 cp .libs/libpng16.a "$OUT/"
 
 # build libpng_read_fuzzer.
+ABORT_LINE=$(grep -n 'extern "C" int LLVMFuzzerTestOneInput' contrib/oss-fuzz/libpng_read_fuzzer.cc | cut -d: -f1)
+echo 'libpng_read_fuzzer.cc:'$ABORT_LINE > $TARGET/BBEntry.txt
 $CXX $CXXFLAGS -std=c++14 -I. \
      contrib/oss-fuzz/libpng_read_fuzzer.cc \
      -o $OUT/libpng_read_fuzzer \

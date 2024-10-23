@@ -40,13 +40,11 @@ fi
 
 # build static analyzer
 (
-    cd "$FUZZER/"
-    git clone -b mzt https://github.com/ChengyuSong/kernel-analyzer.git
-    cd kernel-analyzer && make -j
+    cd "$FUZZER/kernel-analyzer" && make -j
 )
 
 # prepare output dirs
-mkdir -p "$OUT/"{afl,symsan_bc}
+mkdir -p "$OUT/"{afl,clang_bc, symsan}
 
 # compile afl_driver.cpp
 "$FUZZER/afl/afl-clang-fast++" $CXXFLAGS -std=c++14 -c -fPIC \
@@ -55,7 +53,7 @@ mkdir -p "$OUT/"{afl,symsan_bc}
 export CC=clang-12
 export CXX=clang++-12
 $CXX $CXXFLAGS -std=c++14 -c -fPIC \
-    "$FUZZER/afl/afl_driver.cpp" -o "$OUT/symsan_bc/afl_driver.o"
+    "$FUZZER/afl/afl_driver.cpp" -o "$OUT/clang_bc/afl_driver.o"
 
 export KO_CC=clang-12
 export KO_CXX=clang++-12
@@ -63,4 +61,4 @@ export CC="$FUZZER/symsan/bin/ko-clang"
 export CXX="$FUZZER/symsan/bin/ko-clang++" 
 unset KO_ADD_AFLGO
 $CXX $CXXFLAGS -std=c++14 -c -fPIC \
-    "$FUZZER/afl/afl_driver.cpp" -o "$OUT/afl_driver.o"
+    "$FUZZER/afl/afl_driver.cpp" -o "$OUT/symsan/afl_driver.o"

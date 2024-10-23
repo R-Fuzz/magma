@@ -16,7 +16,7 @@ export LIBS="$LIBS -l:afl_driver.o -lstdc++"
     export CC="$FUZZER/afl/afl-clang-fast"
     export CXX="$FUZZER/afl/afl-clang-fast++"
 
-    export OUT="/magma_out/afl"
+    export OUT="$OUT/afl"
     export LDFLAGS="$LDFLAGS -L$OUT -g"
 
     "$MAGMA/build.sh"
@@ -28,7 +28,7 @@ export LIBS="$LIBS -l:afl_driver.o -lstdc++"
     export CXX=clang++-12
     export CC=clang-12
 
-    export OUT="/magma_out/symsan_bc"
+    export OUT="$OUT/clang_bc"
     export LDFLAGS="$LDFLAGS -L$OUT -g"
 
     "$MAGMA/build.sh"
@@ -50,6 +50,7 @@ while read patch; do
     # static analysis
     (
         $FUZZER/kernel-analyzer/build/lib/KAMain \
+        --entry-list=${TARGET}/BBEntry.txt \
         --target-list=${TARGET}/BBtargets/${BUG_ID}/BBtargets.txt \
         -dump-policy=${TARGET}/BBtargets/${BUG_ID}/policy.txt \
         -dump-distance=${TARGET}/BBtargets/${BUG_ID}/distance.cfg.txt \
@@ -68,8 +69,8 @@ while read patch; do
         export AFLGO_TARGET_DIR="${TARGET}/BBtargets/${BUG_ID}"
         unset AFLGO_PREPROCESSING
 
-        export LDFLAGS="$LDFLAGS -L$OUT"
-        export OUT="/magma_out/symsan_${BUG_ID}"
+        export LDFLAGS="$LDFLAGS -L$OUT/symsan"
+        export OUT="$OUT/symsan_${BUG_ID}"
 
         mkdir -p $OUT
         "$MAGMA/build.sh"
