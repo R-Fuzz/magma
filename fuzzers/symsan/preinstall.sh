@@ -11,6 +11,10 @@ apt-get update && \
     curl subversion ninja-build cargo inotify-tools libz3-dev libboost-dev libboost-container-dev
 apt-get install -y libz3-dev libgoogle-perftools-dev
 
+curl -O https://apt.llvm.org/llvm.sh \
+    && chmod +x llvm.sh \
+    && ./llvm.sh 14
+
 apt-get update && apt-get install -y clang-12 llvm-12 lld-12
 ln -s /usr/bin/llvm-config-12 /usr/bin/llvm-config
 update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 100 \

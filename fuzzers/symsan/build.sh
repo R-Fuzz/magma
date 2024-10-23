@@ -31,28 +31,36 @@ fi
 #    export PATH="$FUZZER/z3/install/bin:$PATH"
 # )
 
-# # build SymSan
+# build SymSan
 (
     cd "$FUZZER/symsan"
     CC=clang-12 CXX=clang++-12 cmake -DCMAKE_INSTALL_PREFIX=. \
     ./ && make -j && make install
 )
 
+# build static analyzer
+(
+    cd "$FUZZER/"
+    git clone -b mzt https://github.com/ChengyuSong/kernel-analyzer.git
+    cd kernel-analyzer && make -j
+)
 
 # prepare output dirs
-mkdir -p "$OUT/"{afl,symsantrack,symsanfast}
+mkdir -p "$OUT/"{afl,symsan_bc}
 
 # compile afl_driver.cpp
 "$FUZZER/afl/afl-clang-fast++" $CXXFLAGS -std=c++14 -c -fPIC \
     "$FUZZER/afl/afl_driver.cpp" -o "$OUT/afl/afl_driver.o"
 
+export CC=clang-12
+export CXX=clang++-12
+$CXX $CXXFLAGS -std=c++14 -c -fPIC \
+    "$FUZZER/afl/afl_driver.cpp" -o "$OUT/symsan_bc/afl_driver.o"
+
 export KO_CC=clang-12
 export KO_CXX=clang++-12
 export CC="$FUZZER/symsan/bin/ko-clang" 
 export CXX="$FUZZER/symsan/bin/ko-clang++" 
-
-USE_TRACK=1 $CXX -std=c++14 -c -fPIC \
-    "$FUZZER/afl/afl_driver.cpp" -o "$OUT/symsantrack/afl_driver.o"
-
+unset KO_ADD_AFLGO
 $CXX $CXXFLAGS -std=c++14 -c -fPIC \
-    "$FUZZER/afl/afl_driver.cpp" -o "$OUT/symsanfast/afl_driver.o"
+    "$FUZZER/afl/afl_driver.cpp" -o "$OUT/afl_driver.o"
