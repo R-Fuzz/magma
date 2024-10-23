@@ -19,4 +19,4 @@
 /magma/targets/libpng/repo_bc/intel/filter_sse2_intrinsics.o
 /magma/targets/libpng/repo_bc/powerpc/powerpc_init.o
 /magma/targets/libpng/repo_bc/powerpc/filter_vsx_intrinsics.o
-/magma_out/clang_bc/libpng_read_fuzzer.0.0.preopt.bc
+/magma/targets/libpng/repo_bc/libpng_read_fuzzer.bc

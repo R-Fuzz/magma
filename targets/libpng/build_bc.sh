@@ -14,9 +14,9 @@ if [ ! -d "$TARGET/repo" ]; then
 fi
 
 # build the libpng library
-cd "$TARGET/repo"
+cd "$TARGET/repo_bc"
 autoreconf -f -i
-./configure --with-libpng-prefix=MAGMA_ --disable-shared LDFLAGS="$LDFLAGS" CFLAGS="$CFLAGS"
+./configure --disable-shared LDFLAGS="$LDFLAGS" CFLAGS="$CFLAGS"
 make -j$(nproc) clean
 make -j$(nproc) libpng16.la
 
@@ -27,3 +27,5 @@ $CXX $CXXFLAGS -std=c++14 -I. \
      contrib/oss-fuzz/libpng_read_fuzzer.cc \
      -o $OUT/libpng_read_fuzzer \
      $LDFLAGS .libs/libpng16.a $LIBS -lz
+# build llvm bitcode version of libpng_read_fuzzer
+$CXX $CXXFLAGS -std=c++14 -I. -emit-llvm -c contrib/oss-fuzz/libpng_read_fuzzer.cc -o libpng_read_fuzzer.bc

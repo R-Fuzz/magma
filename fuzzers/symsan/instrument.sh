@@ -12,17 +12,6 @@ set -e
 
 export LIBS="$LIBS -l:afl_driver.o -lstdc++"
 
-(
-    export CC="$FUZZER/afl/afl-clang-fast"
-    export CXX="$FUZZER/afl/afl-clang-fast++"
-
-    export OUT="$OUT/afl"
-    export LDFLAGS="$LDFLAGS -L$OUT -g"
-
-    "$MAGMA/build.sh"
-    "$TARGET/build.sh"
-)
-
 # build bitcode files
 (
     export CXX=clang++-12
@@ -33,13 +22,22 @@ export LIBS="$LIBS -l:afl_driver.o -lstdc++"
 
     "$MAGMA/build.sh"
 
-    cp -r $TARGET/repo $TARGET/repo_orign
-    export CXXFLAGS="$CXXFLAGS -flto -fuse-ld=lld-12 -Wl,-plugin-opt=save-temps"
-    export CFLAGS="$CFLAGS -flto -fuse-ld=lld-12 -Wl,-plugin-opt=save-temps"
-    "$TARGET/build.sh"
+    cp -r $TARGET/repo $TARGET/repo_bc
+    export CXXFLAGS="$CXXFLAGS -O0 -g -flto -fuse-ld=lld-12 -Wl,-plugin-opt=save-temps"
+    export CFLAGS="$CFLAGS -O0 -g -flto -fuse-ld=lld-12 -Wl,-plugin-opt=save-temps"
+    "$TARGET/build_bc.sh"
+)
 
-    mv $TARGET/repo $TARGET/repo_bc
-    mv $TARGET/repo_orign $TARGET/repo
+# build AFL instrumented version
+(
+    export CC="$FUZZER/afl/afl-clang-fast"
+    export CXX="$FUZZER/afl/afl-clang-fast++"
+
+    export OUT="$OUT/afl"
+    export LDFLAGS="$LDFLAGS -L$OUT -g"
+
+    "$MAGMA/build.sh"
+    "$TARGET/build.sh"
 )
 
 find "$TARGET/patches/bugs" -name "*.patch" | \

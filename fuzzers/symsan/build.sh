@@ -1,5 +1,5 @@
 #!/bin/bash
-set -xe
+set -e
 
 ##
 # Pre-requirements:
@@ -44,7 +44,7 @@ fi
 )
 
 # prepare output dirs
-mkdir -p "$OUT/"{afl,clang_bc, symsan}
+mkdir -p "$OUT/afl" "$OUT/clang_bc" "$OUT/symsan"
 
 # compile afl_driver.cpp
 "$FUZZER/afl/afl-clang-fast++" $CXXFLAGS -std=c++14 -c -fPIC \

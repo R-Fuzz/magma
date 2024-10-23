@@ -14,7 +14,7 @@ cp "$FUZZER/src/afl_driver.cpp" "$FUZZER/afl/afl_driver.cpp"
 
 git clone -b rl https://github.com/sgzeng/symsan.git "$FUZZER/symsan"
 
-git clone -b mzt https://github.com/ChengyuSong/kernel-analyzer.git
+git clone -b mzt https://github.com/ChengyuSong/kernel-analyzer.git "$FUZZER/kernel-analyzer"
 
 # git clone --no-checkout https://github.com/Z3Prover/z3.git "$FUZZER/z3"
 # git -C "$FUZZER/z3" checkout z3-4.8.12
