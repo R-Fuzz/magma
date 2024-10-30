@@ -258,12 +258,31 @@ for FUZZER in "${FUZZERS[@]}"; do
             export PROGRAM
             export ARGS="$(get_var_or_default $FUZZER $TARGET $PROGRAM 'ARGS')"
 
-            echo_time "Starting campaigns for $PROGRAM $ARGS"
-            for ((i=0; i<$REPEAT; i++)); do
-                export NUMWORKERS="$(get_var_or_default $FUZZER 'CAMPAIGN_WORKERS')"
-                export AFFINITY=$(allocate_workers)
-                start_ex &
-            done
+            # Get bug IDs for the current program
+            BUG_DIR="$MAGMA/targets/$PROGRAM/patches/bugs"
+            BUGIDS=()
+            if [ -d "$BUG_DIR" ]; then
+                BUGIDS=($(basename -a "$BUG_DIR"/*.patch | sed 's/\.patch$//'))
+            fi
+
+            if [ "$FUZZER" == "symsan" ]; then
+                echo_time "Starting campaigns for $PROGRAM $ARGS with bugs: ${BUGIDS[*]}"
+                for BUGID in "${BUGIDS[@]}"; do
+                    export BUGID
+                    for ((i=0; i<$REPEAT; i++)); do
+                        export NUMWORKERS="$(get_var_or_default $FUZZER 'CAMPAIGN_WORKERS')"
+                        export AFFINITY=$(allocate_workers)
+                        start_ex &
+                    done
+                done
+            else
+                echo_time "Starting campaigns for $PROGRAM $ARGS"
+                for ((i=0; i<$REPEAT; i++)); do
+                    export NUMWORKERS="$(get_var_or_default $FUZZER 'CAMPAIGN_WORKERS')"
+                    export AFFINITY=$(allocate_workers)
+                    start_ex &
+                done
+            fi
         done
     done
 done

@@ -51,11 +51,16 @@ if [ ! -z "$SHARED" ]; then
     flag_volume="--volume=$SHARED:/magma_shared"
 fi
 
+if [ -z "$BUGID" ]; then
+    BUGID="ALL"
+fi
+
 if [ -t 1 ]; then
     docker run -it $flag_volume \
         --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
         --env=PROGRAM="$PROGRAM" --env=ARGS="$ARGS" \
         --env=FUZZARGS="$FUZZARGS" --env=POLL="$POLL" --env=TIMEOUT="$TIMEOUT" \
+        --env=BUGID="$BUGID" \
         $flag_aff $flag_ep "$IMG_NAME"
 else
     container_id=$(
@@ -63,6 +68,7 @@ else
         --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
         --env=PROGRAM="$PROGRAM" --env=ARGS="$ARGS" \
         --env=FUZZARGS="$FUZZARGS" --env=POLL="$POLL" --env=TIMEOUT="$TIMEOUT" \
+        --env=BUGID="$BUGID" \
         --network=none \
         $flag_aff $flag_ep "$IMG_NAME"
     )
