@@ -50,8 +50,8 @@ while read patch; do
         $FUZZER/kernel-analyzer/build/lib/KAMain \
         --entry-list=${TARGET}/BBEntry.txt \
         --target-list=${TARGET}/BBtargets/${BUG_ID}/BBtargets.txt \
-        -dump-policy=${TARGET}/BBtargets/${BUG_ID}/policy.txt \
-        -dump-distance=${TARGET}/BBtargets/${BUG_ID}/distance.cfg.txt \
+        --dump-policy=${TARGET}/BBtargets/${BUG_ID}/policy.txt \
+        --dump-distance=${TARGET}/BBtargets/${BUG_ID}/distance.cfg.txt \
         @${TARGET}/bcfiles.txt
     )
     # build with SymSan
@@ -68,7 +68,7 @@ while read patch; do
         unset AFLGO_PREPROCESSING
 
         export LDFLAGS="$LDFLAGS -L$OUT/symsan"
-        export OUT="$OUT/symsan_${BUG_ID}"
+        export OUT="$OUT/${BUG_ID}"
 
         mkdir -p $OUT
         "$MAGMA/build.sh"
