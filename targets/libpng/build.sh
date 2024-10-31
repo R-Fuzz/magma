@@ -16,7 +16,7 @@ fi
 # build the libpng library
 cd "$TARGET/repo"
 autoreconf -f -i
-./configure --with-libpng-prefix=MAGMA_ --disable-shared LDFLAGS="$LDFLAGS" CFLAGS="$CFLAGS"
+./configure --enable-hardware-optimizations=off --with-libpng-prefix=MAGMA_ --disable-shared LDFLAGS="$LDFLAGS" CFLAGS="$CFLAGS"
 make -j$(nproc) clean
 make -j$(nproc) libpng16.la
 
@@ -26,4 +26,4 @@ cp .libs/libpng16.a "$OUT/"
 $CXX $CXXFLAGS -std=c++14 -I. \
      contrib/oss-fuzz/libpng_read_fuzzer.cc \
      -o $OUT/libpng_read_fuzzer \
-     $LDFLAGS .libs/libpng16.a $LIBS -lz
+     $LDFLAGS .libs/libpng16.a $LIBS $FUZZER_LIB -lz

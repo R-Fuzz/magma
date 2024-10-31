@@ -10,7 +10,7 @@ set -e
 # - env CFLAGS and CXXFLAGS must be set to link against Magma instrumentation
 ##
 
-export LIBS="$LIBS -l:afl_driver.o -lstdc++"
+export FUZZER_LIB="-l:libfuzzer-harness-fast.o -lstdc++"
 
 # build bitcode files
 (
@@ -34,6 +34,7 @@ export LIBS="$LIBS -l:afl_driver.o -lstdc++"
     export CXX="$FUZZER/afl/afl-clang-fast++"
 
     export OUT="$OUT/afl"
+    export FUZZER_LIB="-l:afl_driver.o -lstdc++"
     export LDFLAGS="$LDFLAGS -L$OUT -g"
 
     "$MAGMA/build.sh"
