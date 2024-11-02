@@ -23,8 +23,12 @@ export FUZZER_LIB="-l:libfuzzer-harness-fast.o -lstdc++"
     "$MAGMA/build.sh"
 
     cp -r $TARGET/repo $TARGET/repo_bc
-    export CXXFLAGS="$CXXFLAGS -O0 -g -flto -fuse-ld=lld-12 -Wl,-plugin-opt=save-temps"
-    export CFLAGS="$CFLAGS -O0 -g -flto -fuse-ld=lld-12 -Wl,-plugin-opt=save-temps"
+
+    $CC $CFLAGS -DMAGMA_FATAL_CANARIES -emit-llvm -c -D"MAGMA_STORAGE=\"$MAGMA_STORAGE\"" -c "$MAGMA/src/canary.c" \
+    -fPIC -I "$MAGMA/src/" -o "$OUT/canary.o" $LDFLAGS
+
+    export CXXFLAGS="$CXXFLAGS -flto -fuse-ld=lld-12 -Wl,-plugin-opt=save-temps"
+    export CFLAGS="$CFLAGS -flto -fuse-ld=lld-12 -Wl,-plugin-opt=save-temps"
     "$TARGET/build_bc.sh"
 )
 
@@ -54,6 +58,13 @@ while read patch; do
         --dump-policy=${TARGET}/BBtargets/${BUG_ID}/policy.txt \
         --dump-distance=${TARGET}/BBtargets/${BUG_ID}/distance.cfg.txt \
         @${TARGET}/bcfiles.txt
+
+        $FUZZER/kernel-analyzer/build/lib/KAMain \
+        --entry-list=${MAGMA}/BBEntry.txt \
+        --target-list=${MAGMA}/BBtargets.txt \
+        --dump-policy=${TARGET}/BBtargets/${BUG_ID}/policy.txt \
+        --dump-distance=${TARGET}/BBtargets/${BUG_ID}/distance.cfg.txt \
+        "$OUT/clang_bc/canary.o"
     )
     # build with SymSan
     (
