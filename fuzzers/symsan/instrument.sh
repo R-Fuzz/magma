@@ -55,16 +55,18 @@ while read patch; do
         $FUZZER/kernel-analyzer/build/lib/KAMain \
         --entry-list=${TARGET}/BBEntry.txt \
         --target-list=${TARGET}/BBtargets/${BUG_ID}/BBtargets.txt \
-        --dump-policy=${TARGET}/BBtargets/${BUG_ID}/policy.txt \
-        --dump-distance=${TARGET}/BBtargets/${BUG_ID}/distance.cfg.txt \
+        --dump-policy=${TARGET}/BBtargets/${BUG_ID}/policy_reach.txt \
+        --dump-distance=${TARGET}/BBtargets/${BUG_ID}/distance_reach.cfg.txt \
         @${TARGET}/bcfiles.txt
 
         $FUZZER/kernel-analyzer/build/lib/KAMain \
         --entry-list=${MAGMA}/BBEntry.txt \
         --target-list=${MAGMA}/BBtargets.txt \
-        --dump-policy=${TARGET}/BBtargets/${BUG_ID}/policy.txt \
-        --dump-distance=${TARGET}/BBtargets/${BUG_ID}/distance.cfg.txt \
+        --dump-policy=${TARGET}/BBtargets/${BUG_ID}/policy_trigger.txt \
+        --dump-distance=${TARGET}/BBtargets/${BUG_ID}/distance_trigger.cfg.txt \
         "$OUT/clang_bc/canary.o"
+
+        python3 $FUZZER/merge_distance_policy.py ${TARGET}/BBtargets/${BUG_ID}
     )
     # build with SymSan
     (
