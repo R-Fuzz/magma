@@ -56,7 +56,7 @@ if __name__ == '__main__':
     for l in reach_distance_lines:
         items = l.split(',')
         bid, loc, distance = items[0], items[1], float(items[2])
-        distance_dict[(bid, loc)] = distance + 1000.
+        distance_dict[(bid, loc)] = distance + 2000.
     distance_dict = dict(sorted(distance_dict.items(), key=sort_key))
     with open(sa_dir / 'distance.cfg.txt', 'w') as f:
         for k, v in distance_dict.items():
