@@ -89,8 +89,10 @@ fatal: (void)0;
     if (pid == 0) {
         pid = getpid();
     }
-    if (condition)
+    if (condition){
+        sleep(5);
         kill(pid, ((bool)condition)*11);
+    }
 #endif
 #endif
     return;
