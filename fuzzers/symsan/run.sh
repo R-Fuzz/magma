@@ -13,10 +13,34 @@
 ##
 
 mkdir -p "$SHARED/findings"
+ulimit -c 0
 
-python3 -u "$FUZZER/symsan/mazerunner/mazerunner.py" \
-    -i "$TARGET/corpus/$PROGRAM" \
-    -o "$SHARED/findings" \
-    -s "$TARGET/BBtargets/$BUGID" \
-    -a explore -m reachability \
-    $FUZZARGS -- "$OUT/$BUGID/$PROGRAM" $ARGS 2>&1
+(
+    export AFL_HANG_TMOUT=100
+    export AFL_SKIP_CPUFREQ=1
+    export AFL_NO_AFFINITY=1
+    export AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES=1
+    export ASAN_OPTIONS="abort_on_error=1:symbolize=0"
+    export AFL_NO_UI=1
+
+    nohup timeout "$TIMEOUT" \
+        "$FUZZER/aflgo/afl-2.57b/afl-fuzz" \
+        -S out -l /tmp/mr -m none \
+        -i /magma/targets/libpng/corpus/libpng_read_fuzzer \
+        -o "$SHARED/findings/aflgo" \
+        $FUZZARGS -- "$OUT/$BUGID/$PROGRAM" $ARGS \
+        > "$SHARED/findings/aflgo.log" 2>&1 &
+)
+sleep 2s
+(
+    nohup timeout "$TIMEOUT" \
+        python3 -u "$FUZZER/symsan/mazerunner/mazerunner.py" \
+        -monitor_resource -a hybrid -n mazerunner \
+        -f "$SHARED/findings/aflgo/out" \
+        -i /magma/targets/libpng/corpus/libpng_read_fuzzer \
+        -m reachability \
+        -o "$SHARED/findings" \
+        -s "$TARGET/BBtargets" \
+        $FUZZARGS -- "$OUT/$BUGID/$PROGRAM" $ARGS \
+        > "$SHARED/findings/mazerunner.log" 2>&1 &
+)
