@@ -45,7 +45,7 @@ fi
 )
 
 # prepare output dirs
-mkdir -p "$OUT/afl" "$OUT/clang_bc" "$OUT/symsan"
+mkdir -p "$OUT/afl" "$OUT/aflgo" "$OUT/clang_bc" "$OUT/symsan"
 
 # compile afl_driver
 "$FUZZER/afl/afl-clang-fast++" $CXXFLAGS -std=c++14 -c -fPIC \
