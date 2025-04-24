@@ -1,0 +1,98 @@
+No instrumentation targets found for /magma/magma/src/canary.c
+No instrumentation targets found for /magma/magma/src/storage.c
+No instrumentation targets found for testdso.c
+No instrumentation targets found for nanohttp.c
+No instrumentation targets found for SAX.c
+No instrumentation targets found for threads.c
+No instrumentation targets found for list.c
+No instrumentation targets found for xlink.c
+No instrumentation targets found for globals.c
+No instrumentation targets found for xmlmemory.c
+No instrumentation targets found for error.c
+No instrumentation targets found for xmlstring.c
+Instrumented 38 locations (non-hardened mode) to hash.c
+No instrumentation targets found for HTMLtree.c
+Instrumented 1 locations (non-hardened mode) to entities.c
+No instrumentation targets found for buf.c
+No instrumentation targets found for c14n.c
+No instrumentation targets found for parserInternals.c
+No instrumentation targets found for encoding.c
+No instrumentation targets found for xinclude.c
+No instrumentation targets found for nanoftp.c
+No instrumentation targets found for xmlIO.c
+No instrumentation targets found for xpointer.c
+No instrumentation targets found for xmllint.c
+No instrumentation targets found for uri.c
+Instrumented 29 locations (non-hardened mode) to catalog.c
+No instrumentation targets found for debugXML.c
+No instrumentation targets found for xmlunicode.c
+No instrumentation targets found for dict.c
+No instrumentation targets found for chvalid.c
+No instrumentation targets found for legacy.c
+Instrumented 173 locations (non-hardened mode) to valid.c
+No instrumentation targets found for xmlregexp.c
+No instrumentation targets found for xmlmodule.c
+No instrumentation targets found for HTMLparser.c
+Instrumented 9 locations (non-hardened mode) to SAX2.c
+Instrumented 13 locations (non-hardened mode) to xmlwriter.c
+No instrumentation targets found for xmlschemastypes.c
+No instrumentation targets found for xmlcatalog.c
+Instrumented 251 locations (non-hardened mode) to xmlreader.c
+No instrumentation targets found for schematron.c
+No instrumentation targets found for xmlsave.c
+Instrumented 88 locations (non-hardened mode) to tree.c
+No instrumentation targets found for xzlib.c
+No instrumentation targets found for pattern.c
+No instrumentation targets found for xpath.c
+Instrumented 103 locations (non-hardened mode) to relaxng.c
+No instrumentation targets found for parser.c
+Instrumented 104 locations (non-hardened mode) to xmlschemas.c
+No instrumentation targets found for /magma/magma/src/canary.c
+No instrumentation targets found for /magma/magma/src/storage.c
+No instrumentation targets found for testdso.c
+No instrumentation targets found for nanohttp.c
+No instrumentation targets found for xlink.c
+No instrumentation targets found for SAX.c
+No instrumentation targets found for list.c
+No instrumentation targets found for threads.c
+No instrumentation targets found for globals.c
+Instrumented 38 locations (non-hardened mode) to hash.c
+No instrumentation targets found for xmlmemory.c
+No instrumentation targets found for error.c
+Instrumented 1 locations (non-hardened mode) to entities.c
+No instrumentation targets found for HTMLtree.c
+No instrumentation targets found for xmlstring.c
+No instrumentation targets found for buf.c
+No instrumentation targets found for parserInternals.c
+No instrumentation targets found for c14n.c
+No instrumentation targets found for encoding.c
+No instrumentation targets found for nanoftp.c
+No instrumentation targets found for xmlIO.c
+No instrumentation targets found for xinclude.c
+No instrumentation targets found for xpointer.c
+No instrumentation targets found for xmllint.c
+No instrumentation targets found for debugXML.c
+No instrumentation targets found for uri.c
+Instrumented 29 locations (non-hardened mode) to catalog.c
+No instrumentation targets found for xmlunicode.c
+No instrumentation targets found for dict.c
+Instrumented 173 locations (non-hardened mode) to valid.c
+No instrumentation targets found for chvalid.c
+No instrumentation targets found for xmlregexp.c
+No instrumentation targets found for legacy.c
+No instrumentation targets found for xmlmodule.c
+Instrumented 13 locations (non-hardened mode) to xmlwriter.c
+No instrumentation targets found for HTMLparser.c
+Instrumented 9 locations (non-hardened mode) to SAX2.c
+No instrumentation targets found for schematron.c
+No instrumentation targets found for xmlcatalog.c
+No instrumentation targets found for xmlschemastypes.c
+Instrumented 251 locations (non-hardened mode) to xmlreader.c
+No instrumentation targets found for pattern.c
+No instrumentation targets found for xmlsave.c
+No instrumentation targets found for xzlib.c
+Instrumented 88 locations (non-hardened mode) to tree.c
+Instrumented 103 locations (non-hardened mode) to relaxng.c
+No instrumentation targets found for xpath.c
+No instrumentation targets found for parser.c
+Instrumented 104 locations (non-hardened mode) to xmlschemas.c
