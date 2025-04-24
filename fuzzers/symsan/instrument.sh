@@ -27,16 +27,22 @@ set -xe
 
     export CXXFLAGS="$CXXFLAGS -O0 -g -flto -fuse-ld=lld-12 -Wl,-plugin-opt=save-temps"
     export CFLAGS="$CFLAGS -O0 -g -flto -fuse-ld=lld-12 -Wl,-plugin-opt=save-temps"
-    export FUZZER_LIB="-l:libfuzzer-harness-fast.o -lstdc++"
 
     "$TARGET/build_bc.sh"
 )
 
+blacklist=("XML005" "XML007" "XML013" "XML014" "XML015")
 find "$TARGET/patches/bugs" -name "*.patch" | \
 while read patch; do
     echo "Preparing env for $patch"
     NAME=${patch##*/}
     BUG_ID=${NAME%.patch}
+
+    if [[ " ${blacklist[@]} " =~ " ${BUG_ID} " ]]; then
+        echo "Skipping blacklisted BUG_ID: $BUG_ID"
+        continue
+    fi
+
     # static analysis
     (
         $FUZZER/kernel-analyzer/build/lib/KAMain \

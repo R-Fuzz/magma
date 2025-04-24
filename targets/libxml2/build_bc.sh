@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -xe
 
 ##
 # Pre-requirements:
@@ -8,14 +8,13 @@ set -e
 # - env CC, CXX, FLAGS, LIBS, etc...
 ##
 
-if [ ! -d "$TARGET/repo" ]; then
+if [ ! -d "$TARGET/repo_bc" ]; then
     echo "fetch.sh must be executed first."
     exit 1
 fi
 
-cd "$TARGET/repo"
+cd "$TARGET/repo_bc"
 ./autogen.sh \
-	--with-zlib=/magma/targets/libxml2/zlib-1.2.13/build \
 	--with-http=no \
 	--with-python=no \
 	--with-lzma=yes \
@@ -27,7 +26,5 @@ make -j$(nproc) all
 cp xmllint "$OUT/"
 
 for fuzzer in libxml2_xml_read_memory_fuzzer libxml2_xml_reader_for_file_fuzzer; do
-  $CXX $CXXFLAGS -std=c++11 -Iinclude/ -I"$TARGET/src/" \
-      "$TARGET/src/$fuzzer.cc" -o "$OUT/$fuzzer" \
-      .libs/libxml2.a $LDFLAGS $LIBS $FUZZER_LIB -lz -llzma
+  $CXX $CXXFLAGS -std=c++11 -Iinclude/ -I"$TARGET/src/" -emit-llvm -c "$TARGET/src/$fuzzer.cc" -o $fuzzer.bc
 done
