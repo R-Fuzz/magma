@@ -44,6 +44,22 @@ fi
     cd "$FUZZER/kernel-analyzer" && make -j
 )
 
+# build symsan instrumented zlib
+(
+    cd "$FUZZER"
+    wget https://github.com/madler/zlib/archive/refs/tags/v1.2.13.tar.gz
+    tar -xzf v1.2.13.tar.gz
+    cd zlib-1.2.13
+    export KO_CXX=clang++-12
+    export KO_CC=clang-12
+    export CXX="$FUZZER/symsan/build/bin/ko-clang++"
+    export CC="$FUZZER/symsan/build/bin/ko-clang"
+    export KO_USE_FASTGEN=
+    export KO_NO_NATIVE_ZLIB=1
+    ./configure --static --prefix=$FUZZER/zlib-1.2.13/zlib-1.2.13
+    make -j $(nproc) all
+)
+
 # prepare output dirs
 mkdir -p "$OUT/afl" "$OUT/aflgo" "$OUT/clang_bc" "$OUT/symsan"
 
@@ -60,5 +76,4 @@ unset KO_ADD_AFLGO
 #     "$FUZZER/afl/afl_driver.cpp" -o "$OUT/symsan/afl_driver.o"
 
 # compile libfuzzer-harness-fast
-KO_DONT_OPTIMIZE=1 $KO_CC -c $FUZZER/libfuzz-harness-proxy.c -o $OUT/clang_bc/libfuzzer-harness-fast.o
 KO_DONT_OPTIMIZE=1 $CC -c $FUZZER/libfuzz-harness-proxy.c -o $OUT/symsan/libfuzzer-harness-fast.o
