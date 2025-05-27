@@ -12,15 +12,31 @@ set -e
 
 export AFL_PATH="$FUZZER/repo/"
 export CC="$FUZZER/repo/afl-cc"
-export CXX="$FUZZER/repo/afl-cc++"
-export AS="llvm-as"
-export AR="llvm-ar"
-export RANLIB="llvm-ranlib"
+export CXX="$FUZZER/repo/afl-c++"
 
-export LIBS="$LIBS $FUZZER/repo/utils/aflpp_driver/libAFLDriver.a"
+# uncomment for LTO mode
+# export CC_LTO="$FUZZER/repo/afl-clang-lto"
+# export CXX_LTO="$FUZZER/repo/afl-clang-lto++"
+# export AS="llvm-as-16"
+# export AR="llvm-ar-16"
+# export NM="llvm-nm-16"
+# export RANLIB="llvm-ranlib-16"
+## choose one of LD
+# export LD="$FUZZER/repo/afl-clang-lto"
+## export LD="$FUZZER/repo/afl-ld-lto"
+
+export FUZZER_LIB="$FUZZER/repo/utils/aflpp_driver/libAFLDriver.a"
 export CFLAGS="$CFLAGS -fsanitize=address"
 export CXXFLAGS="$CXXFLAGS -fsanitize=address -stdlib=libstdc++"
 export LDFLAGS="$LDFLAGS -fsanitize=address"
+
+export AFL_USE_ASAN=1
+# Some targets do not support a static AFL memory region
+DYNAMIC_TARGETS=(php openssl)
+TARGET_NAME="$(basename $TARGET)"
+if [[ " ${DYNAMIC_TARGETS[@]} " =~ " $TARGET_NAME " ]]; then
+    export AFL_LLVM_MAP_DYNAMIC=1
+fi
 
 # Build the AFL-only instrumented version
 (
