@@ -1,0 +1,90 @@
+No instrumentation targets found for /magma/magma/src/canary.c
+No instrumentation targets found for /magma/magma/src/storage.c
+No instrumentation targets found for pngwutil.c
+No instrumentation targets found for pngwrite.c
+No instrumentation targets found for pngwio.c
+No instrumentation targets found for pngmem.c
+No instrumentation targets found for pngrio.c
+No instrumentation targets found for pngwtran.c
+No instrumentation targets found for pngerror.c
+No instrumentation targets found for pngpread.c
+No instrumentation targets found for pngtrans.c
+No instrumentation targets found for pngset.c
+No instrumentation targets found for pngget.c
+Instrumented 3 locations (non-hardened mode) to pngread.c
+No instrumentation targets found for png.c
+No instrumentation targets found for pngrutil.c
+Instrumented 9 locations (non-hardened mode) to pngrtran.c
+Instrumented 31 locations (non-hardened mode) to contrib/oss-fuzz/libpng_read_fuzzer.cc
+No instrumentation targets found for /magma/magma/src/canary.c
+No instrumentation targets found for /magma/magma/src/storage.c
+No instrumentation targets found for pngwrite.c
+No instrumentation targets found for pngwio.c
+No instrumentation targets found for pngwtran.c
+No instrumentation targets found for pngrio.c
+No instrumentation targets found for pngerror.c
+No instrumentation targets found for pngwutil.c
+No instrumentation targets found for pngtrans.c
+No instrumentation targets found for pngmem.c
+No instrumentation targets found for pngget.c
+No instrumentation targets found for pngpread.c
+No instrumentation targets found for pngset.c
+No instrumentation targets found for png.c
+Instrumented 3 locations (non-hardened mode) to pngread.c
+Instrumented 9 locations (non-hardened mode) to pngrtran.c
+No instrumentation targets found for pngrutil.c
+Instrumented 31 locations (non-hardened mode) to contrib/oss-fuzz/libpng_read_fuzzer.cc
+No instrumentation targets found for /magma/magma/src/canary.c
+No instrumentation targets found for /magma/magma/src/storage.c
+No instrumentation targets found for png.c
+No instrumentation targets found for pngerror.c
+No instrumentation targets found for pngget.c
+No instrumentation targets found for pngmem.c
+No instrumentation targets found for pngpread.c
+Instrumented 3 locations (non-hardened mode) to pngread.c
+No instrumentation targets found for pngrio.c
+Instrumented 6 locations (non-hardened mode) to pngrtran.c
+No instrumentation targets found for pngrutil.c
+No instrumentation targets found for pngset.c
+No instrumentation targets found for pngtrans.c
+No instrumentation targets found for pngwio.c
+No instrumentation targets found for pngwrite.c
+No instrumentation targets found for pngwtran.c
+No instrumentation targets found for pngwutil.c
+No instrumentation targets found for contrib/oss-fuzz/libpng_read_fuzzer.cc
+No instrumentation targets found for /magma/magma/src/canary.c
+No instrumentation targets found for /magma/magma/src/storage.c
+No instrumentation targets found for png.c
+No instrumentation targets found for pngerror.c
+No instrumentation targets found for pngget.c
+No instrumentation targets found for pngmem.c
+No instrumentation targets found for pngpread.c
+Instrumented 3 locations (non-hardened mode) to pngread.c
+No instrumentation targets found for pngrio.c
+Instrumented 9 locations (non-hardened mode) to pngrtran.c
+No instrumentation targets found for pngrutil.c
+No instrumentation targets found for pngset.c
+No instrumentation targets found for pngtrans.c
+No instrumentation targets found for pngwio.c
+No instrumentation targets found for pngwrite.c
+No instrumentation targets found for pngwtran.c
+No instrumentation targets found for pngwutil.c
+Instrumented 31 locations (non-hardened mode) to contrib/oss-fuzz/libpng_read_fuzzer.cc
+No instrumentation targets found for /magma/magma/src/canary.c
+No instrumentation targets found for /magma/magma/src/storage.c
+No instrumentation targets found for pngwio.c
+No instrumentation targets found for pngwtran.c
+No instrumentation targets found for pngwutil.c
+No instrumentation targets found for pngrio.c
+No instrumentation targets found for pngmem.c
+No instrumentation targets found for pngwrite.c
+No instrumentation targets found for pngtrans.c
+No instrumentation targets found for pngerror.c
+No instrumentation targets found for pngget.c
+No instrumentation targets found for pngpread.c
+No instrumentation targets found for pngset.c
+Instrumented 3 locations (non-hardened mode) to pngread.c
+No instrumentation targets found for png.c
+No instrumentation targets found for pngrutil.c
+Instrumented 9 locations (non-hardened mode) to pngrtran.c
+Instrumented 31 locations (non-hardened mode) to contrib/oss-fuzz/libpng_read_fuzzer.cc
