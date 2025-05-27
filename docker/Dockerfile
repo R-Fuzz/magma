@@ -3,7 +3,8 @@ FROM ubuntu:22.04
 # TODO remove sudo for user "magma" to avoid unwanted priv escalation from
 # other attack vectors.
 
-RUN apt-get update && apt-get install -y sudo
+RUN DEBIAN_FRONTEND=noninteractive \
+    apt-get update && apt-get install -y sudo
 
 ## Magma directory hierarchy
 # magma_root is relative to the docker-build's working directory
@@ -41,9 +42,16 @@ ARG magma_path=magma
 ENV MAGMA 	${MAGMA_R}/${magma_path}
 USER root:root
 RUN mkdir -p ${MAGMA} && chown magma:magma ${MAGMA}
-COPY --chown=magma:magma ${magma_root}/${magma_path} ${MAGMA}/
-RUN ${MAGMA}/preinstall.sh
+
+# Install Magma dependencies
+COPY --chown=magma:magma ${magma_root}/${magma_path}/preinstall.sh ${MAGMA}
+RUN DEBIAN_FRONTEND=noninteractive \
+    ${MAGMA}/preinstall.sh
+
 USER magma:magma
+
+COPY --chown=magma:magma ${magma_root}/${magma_path}/prebuild.sh ${MAGMA}
+COPY --chown=magma:magma ${magma_root}/${magma_path}/src ${MAGMA}/src
 RUN ${MAGMA}/prebuild.sh
 
 ARG fuzzer_name
@@ -51,21 +59,44 @@ ARG fuzzer_path=fuzzers/${fuzzer_name}
 ENV FUZZER 	${MAGMA_R}/${fuzzer_path}
 USER root:root
 RUN mkdir -p ${FUZZER} && chown magma:magma ${FUZZER}
-COPY --chown=magma:magma ${magma_root}/${fuzzer_path} ${FUZZER}/
+
+# Install fuzzer dependencies
+COPY --chown=magma:magma ${magma_root}/${fuzzer_path}/preinstall.sh ${FUZZER}
 RUN ${FUZZER}/preinstall.sh
+
 USER magma:magma
+
+# Fetch fuzzer
+COPY --chown=magma:magma ${magma_root}/${fuzzer_path}/fetch.sh ${FUZZER}
+COPY --chown=magma:magma ${magma_root}/${fuzzer_path}/src ${FUZZER}/src
 RUN ${FUZZER}/fetch.sh
+
+# Build fuzzer
+COPY --chown=magma:magma ${magma_root}/${fuzzer_path}/build.sh ${FUZZER}
 RUN ${FUZZER}/build.sh
 
 ARG target_name
 ARG target_path=targets/${target_name}
-ENV TARGET 	${MAGMA_R}/${target_path}
+ENV TARGET ${MAGMA_R}/${target_path}
 USER root:root
 RUN mkdir -p ${TARGET} && chown magma:magma ${TARGET}
-COPY --chown=magma:magma ${magma_root}/${target_path} ${TARGET}/
+
+# Install target dependencies
+COPY --chown=magma:magma ${magma_root}/${target_path}/preinstall.sh ${TARGET}
 RUN ${TARGET}/preinstall.sh
+
 USER magma:magma
+
+# Get the target
+COPY --chown=magma:magma ${magma_root}/${target_path}/fetch.sh ${TARGET}
+COPY --chown=magma:magma ${magma_root}/${target_path}/src ${TARGET}/src
 RUN ${TARGET}/fetch.sh
+
+# Forward-port bugs
+COPY --chown=magma:magma ${magma_root}/${target_path}/patches ${TARGET}/patches
+COPY --chown=magma:magma ${magma_root}/${target_path}/src ${TARGET}/src
+COPY --chown=magma:magma ${magma_root}/${target_path}/configrc ${TARGET}
+COPY --chown=magma:magma ${magma_root}/${magma_path}/apply_patches.sh ${MAGMA}
 RUN ${MAGMA}/apply_patches.sh
 
 ## Configuration parameters
@@ -85,6 +116,17 @@ ENV CXXFLAGS ${BUILD_FLAGS}
 ENV LIBS -l:magma.o -lrt
 ENV LDFLAGS -L"${OUT}" -g
 
+# Instrument and build the target program
+COPY --chown=magma:magma ${magma_root}/${fuzzer_path}/instrument.sh ${FUZZER}
+COPY --chown=magma:magma ${magma_root}/${magma_path}/build.sh ${MAGMA}
+COPY --chown=magma:magma ${magma_root}/${target_path}/build.sh ${TARGET}
 RUN ${FUZZER}/instrument.sh
+
+COPY --chown=magma:magma ${magma_root}/${magma_path}/run.sh ${MAGMA}
+COPY --chown=magma:magma ${magma_root}/${magma_path}/runonce.sh ${MAGMA}
+COPY --chown=magma:magma ${magma_root}/${fuzzer_path}/run.sh ${FUZZER}
+COPY --chown=magma:magma ${magma_root}/${fuzzer_path}/runonce.sh ${FUZZER}
+COPY --chown=magma:magma ${magma_root}/${fuzzer_path}/findings.sh ${FUZZER}
+COPY --chown=magma:magma ${magma_root}/${target_path}/corpus ${TARGET}/corpus
 
 ENTRYPOINT "${MAGMA}/run.sh"
