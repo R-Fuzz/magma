@@ -1,35 +1,33 @@
 #!/bin/bash
 set -e
 
+export DEBIAN_FRONTEND=noninteractive
 apt-get update && \
     apt-get install -y \
-    	make \
+        make \
 	build-essential \
 	git \
 	wget \
-	curl \
-	libcap-dev \
-	cmake \
-        libncurses5-dev \
-	python-minimal \
-	python-pip \
-	unzip \
-	libtcmalloc-minimal4 \
-        libgoogle-perftools-dev \
-	libsqlite3-dev \
-	doxygen \
-        cmake \
-	bison \
-	flex \
-	libboost-all-dev \
-	perl \
-	zlib1g-dev \
-	minisat \
-	libc6-dev-i386 \
-	llvm-14-dev \
-	clang-14
+	gcc-8-plugin-dev \
+	libstdc++-8-dev \
+	gnupg \
+	lsb-release \
+	software-properties-common
 
-pip install --upgrade wllvm
+add-apt-repository -y ppa:ubuntu-toolchain-r/test
+
+(
+    wget https://apt.llvm.org/llvm.sh
+    chmod +x llvm.sh
+    ./llvm.sh 14
+    rm -f llvm.sh
+)
+
+apt-get install -y \
+    libclang-14-dev \
+    libunwind-14 \
+    libc++-14-dev \
+    libc++abi-14-dev
 
 update-alternatives \
   --install /usr/lib/llvm              llvm             /usr/lib/llvm-14  20 \
@@ -59,7 +57,3 @@ update-alternatives \
   --install /usr/bin/clang                 clang                  /usr/bin/clang-14     20 \
   --slave   /usr/bin/clang++               clang++                /usr/bin/clang++-14 \
   --slave   /usr/bin/clang-cpp             clang-cpp              /usr/bin/clang-cpp-14
-
-# remove stack size limit (needed for STP on large binaries)
-echo "magma    soft    stack    unlimited" >> /etc/security/limits.conf
-echo "magma    soft    nofile   unlimited" >> /etc/security/limits.conf

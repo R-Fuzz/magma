@@ -10,14 +10,14 @@ set -e
 # - env CFLAGS and CXXFLAGS must be set to link against Magma instrumentation
 ##
 
-export CC="clang"
-export CXX="clang++"
+export CC="gcc"
+export CXX="g++"
 
-export CFLAGS="$CFLAGS -fsanitize=fuzzer-no-link"
-export CXXFLAGS="$CXXFLAGS -fsanitize=fuzzer-no-link"
-#export LDFLAGS="$LDFLAGS -fsanitize=fuzzer"
+export CFLAGS="$CFLAGS -fprofile-arcs -ftest-coverage"
+export CXXFLAGS="$CXXFLAGS -fprofile-arcs -ftest-coverage"
+export LDFLAGS="$LDFLAGS -fprofile-arcs -ftest-coverage"
 
-export LIBS="$LIBS -l:driver.o $OUT/libFuzzer.a -lstdc++"
+export LIBS="$LIBS -l:StandaloneFuzzTargetMain.o"
 
 "$MAGMA/build.sh"
 "$TARGET/build.sh"

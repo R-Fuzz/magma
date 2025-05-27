@@ -17,8 +17,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+__attribute__((weak))
 extern int LLVMFuzzerTestOneInput(const unsigned char *data, size_t size);
-__attribute__((weak)) extern int LLVMFuzzerInitialize(int *argc, char ***argv);
+__attribute__((weak))
+extern int LLVMFuzzerInitialize(int *argc, char ***argv);
+__attribute__((weak))
 int main(int argc, char **argv) {
   fprintf(stderr, "StandaloneFuzzTargetMain: running %d inputs\n", argc - 1);
   if (LLVMFuzzerInitialize)

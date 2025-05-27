@@ -31,7 +31,7 @@ mkdir -p "$LIBCXX_DIR"
 
 # build Libc++
 (
-    export LLVM_VERSION=9
+    export LLVM_VERSION=17
     export SANITIZER_BUILD=
     export BASE="$LIBCXX_DIR"
     export REQUIRES_RTTI=1
