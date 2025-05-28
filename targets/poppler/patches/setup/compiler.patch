@@ -1,0 +1,70 @@
+diff --git a/goo/gfile.cc b/goo/gfile.cc
+index 277fd4d5..70b355ef 100644
+--- a/goo/gfile.cc
++++ b/goo/gfile.cc
+@@ -45,6 +45,7 @@
+ #    include <pwd.h>
+ #endif // _WIN32
+ #include <cstdio>
++#include <dirent.h>
+ #include <limits>
+ #include "GooString.h"
+ #include "gfile.h"
+diff --git a/goo/gfile.h b/goo/gfile.h
+index 97cd517f..1fd510ac 100644
+--- a/goo/gfile.h
++++ b/goo/gfile.h
+@@ -59,7 +59,6 @@ extern "C" {
+ #        include <dirent.h>
+ #        define NAMLEN(d) strlen((d)->d_name)
+ #    else
+-#        define dirent direct
+ #        define NAMLEN(d) (d)->d_namlen
+ #        ifdef HAVE_SYS_NDIR_H
+ #            include <sys/ndir.h>
+diff --git a/splash/SplashFontFile.cc b/splash/SplashFontFile.cc
+index d1c2ed0e..112c3c1e 100644
+--- a/splash/SplashFontFile.cc
++++ b/splash/SplashFontFile.cc
+@@ -21,7 +21,7 @@
+ //========================================================================
+ 
+ #include <config.h>
+-
++#include <unistd.h>
+ #include <cstdio>
+ #ifdef HAVE_UNISTD_H
+ #    include <unistd.h>
+diff --git a/goo/gdir.h b/goo/gdir.h
+index a042a3fc..d1723abc 100644
+--- a/goo/gdir.h
++++ b/goo/gdir.h
+@@ -36,6 +36,7 @@
+ #define GDIR_H
+ 
+ #include "poppler-config.h"
++#include <dirent.h>
+ 
+ class GooString;
+ 
+diff --git a/goo/glibc.h b/goo/glibc.h
+index 3de68e9f..ed3d2147 100644
+--- a/goo/glibc.h
++++ b/goo/glibc.h
+@@ -31,8 +31,16 @@ struct tm POPPLER_PRIVATE_EXPORT *localtime_r(const time_t *timep, struct tm *re
+ time_t POPPLER_PRIVATE_EXPORT timegm(struct tm *tm);
+ #endif
+ 
++#ifdef __cplusplus
++extern "C" {
++#endif
++
+ #ifndef HAVE_STRTOK_R
+ char *strtok_r(char *s, const char *delim, char **save_ptr);
+ #endif
+ 
++#ifdef __cplusplus
++}
++#endif
++
+ #endif // GLIBC_H
