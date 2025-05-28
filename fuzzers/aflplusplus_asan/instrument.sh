@@ -25,7 +25,7 @@ export CXX="$FUZZER/repo/afl-c++"
 # export LD="$FUZZER/repo/afl-clang-lto"
 ## export LD="$FUZZER/repo/afl-ld-lto"
 
-export FUZZER_LIB="$FUZZER/repo/utils/aflpp_driver/libAFLDriver.a"
+export LIBS="$LIBS $FUZZER/repo/utils/aflpp_driver/libAFLDriver.a"
 export CFLAGS="$CFLAGS -fsanitize=address"
 export CXXFLAGS="$CXXFLAGS -fsanitize=address -stdlib=libstdc++"
 export LDFLAGS="$LDFLAGS -fsanitize=address"
