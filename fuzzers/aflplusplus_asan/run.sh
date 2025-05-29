@@ -25,7 +25,7 @@ export AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES=1
 export AFL_IGNORE_UNKNOWN_ENVS=1
 export AFL_FAST_CAL=1
 export AFL_NO_WARN_INSTABILITY=1
-export AFL_DISABLE_TRIM=1
+export AFL_BENIGN_PROGRAM_ABNORMAL_EXIT=1
 
 for i in $OUT/*.dict $OUT/*.dic $OUT/afl/*.dict $OUT/afl/*.dic; do
     test -f "$i" && DICT="$DICT -x $i"
@@ -33,5 +33,5 @@ done
 
 ulimit -c unlimited
 
-"$FUZZER/repo/afl-fuzz" -i "$TARGET/corpus/$PROGRAM" -o "$SHARED/findings" \
+"$FUZZER/repo/afl-fuzz" -t 1000+ -m none -i "$TARGET/corpus/$PROGRAM" -o "$SHARED/findings" \
     $DICT $FUZZARGS -- "$OUT/afl/$PROGRAM" $ARGS 2>&1
