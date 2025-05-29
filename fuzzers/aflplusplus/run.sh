@@ -37,5 +37,5 @@ done
 ulimit -c unlimited
 
 "$FUZZER/repo/afl-fuzz" -i "$TARGET/corpus/$PROGRAM" -o "$SHARED/findings" \
-    "${flag_cmplog[@]}" $DICT \
+    "${flag_cmplog[@]}" $DICT -d \
     $FUZZARGS -- "$OUT/afl/$PROGRAM" $ARGS 2>&1

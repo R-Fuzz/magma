@@ -33,5 +33,5 @@ done
 
 ulimit -c unlimited
 
-"$FUZZER/repo/afl-fuzz" -t 1000+ -m none -i "$TARGET/corpus/$PROGRAM" -o "$SHARED/findings" \
+"$FUZZER/repo/afl-fuzz" -d -t 1000+ -m none -i "$TARGET/corpus/$PROGRAM" -o "$SHARED/findings" \
     $DICT $FUZZARGS -- "$OUT/afl/$PROGRAM" $ARGS 2>&1
