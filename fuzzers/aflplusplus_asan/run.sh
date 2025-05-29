@@ -17,13 +17,10 @@ fi
 
 mkdir -p "$SHARED/findings"
 
-flag_cmplog=(-c "$OUT/cmplog/$PROGRAM")
-
 export AFL_SKIP_CPUFREQ=1
 export AFL_NO_AFFINITY=1
 export AFL_NO_UI=1
 export AFL_MAP_SIZE=256000
-export AFL_DRIVER_DONT_DEFER=1
 export AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES=1
 export AFL_IGNORE_UNKNOWN_ENVS=1
 export AFL_FAST_CAL=1
@@ -37,5 +34,4 @@ done
 ulimit -c unlimited
 
 "$FUZZER/repo/afl-fuzz" -i "$TARGET/corpus/$PROGRAM" -o "$SHARED/findings" \
-    "${flag_cmplog[@]}" $DICT \
-    $FUZZARGS -- "$OUT/afl/$PROGRAM" $ARGS 2>&1
+    $DICT $FUZZARGS -- "$OUT/afl/$PROGRAM" $ARGS 2>&1
