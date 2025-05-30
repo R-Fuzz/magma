@@ -28,11 +28,6 @@ make clean all
 
 
 cd "$FUZZER/repo"
-cd  instrument_openssl
-make clean all
-
-
-cd "$FUZZER/repo"
 cd  distance/distance_calculator
 cmake ./
 cmake --build ./

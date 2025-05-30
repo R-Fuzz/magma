@@ -16,6 +16,8 @@ export ADDITIONAL="-targets=$TMP_DIR/BBtargets.txt -outdir=$TMP_DIR -flto -fuse-
 export CFLAGS="$CFLAGS $ADDITIONAL"
 export CXXFLAGS="$CXXFLAGS $ADDITIONAL"
 
+git config --global --add safe.directory /magma/targets/poppler/freetype2
+git config --global --add safe.directory /magma/targets/poppler/repo
 export WORK="$TARGET/work"
 rm -rf "$WORK"
 mkdir -p "$WORK"
@@ -36,6 +38,7 @@ EXTRA=""
 test -n "$AR" && EXTRA="$EXTRA -DCMAKE_AR=$AR"
 test -n "$RANLIB" && EXTRA="$EXTRA -DCMAKE_RANLIB=$RANLIB"
 
+export LDFLAGS="$LDFLAGS -lbrotlidec"
 cmake "$TARGET/repo" \
   $EXTRA \
   -DCMAKE_BUILD_TYPE=debug \

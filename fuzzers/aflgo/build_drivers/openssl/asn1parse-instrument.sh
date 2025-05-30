@@ -10,15 +10,9 @@ set -e
 
 
 export TMP_DIR=$OUT/tmp-$1
-
-export CC="$FUZZER/repo/instrument_openssl/aflgo-clang"
-export CXX="$FUZZER/repo/instrument_openssl/aflgo-clang++"
-
-
-
 # Set aflgo-instrumentation flags
-#export CFLAGS="$CFLAGS -distance=$TMP_DIR/distance.cfg.txt"
-#export CXXFLAGS="$CXXFLAGS -distance=$TMP_DIR/distance.cfg.txt"
+export CFLAGS="$CFLAGS -distance=$TMP_DIR/distance.cfg.txt"
+export CXXFLAGS="$CXXFLAGS -distance=$TMP_DIR/distance.cfg.txt"
 
 cd "$TARGET/repo"
 
@@ -34,7 +28,7 @@ export LDLIBS="$LIBS"
     -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION no-shared no-module \
     enable-tls1_3 enable-rc5 enable-md2 enable-ec_nistp_64_gcc_128 enable-ssl3 \
     enable-ssl3-method enable-nextprotoneg enable-weak-ssl-ciphers \
-    $CFLAGS -fno-sanitize=alignment $CONFIGURE_FLAGS
+    -fno-sanitize=alignment $CONFIGURE_FLAGS
 
 make -j$(nproc) clean
 make -j$(nproc) LDCMD="$CXX $CXXFLAGS"

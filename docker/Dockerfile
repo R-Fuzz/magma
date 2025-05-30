@@ -117,7 +117,7 @@ ENV LIBS -l:magma.o -lrt
 ENV LDFLAGS -L"${OUT}" -g
 
 # Instrument and build the target program
-COPY --chown=magma:magma ${magma_root}/${fuzzer_path}/instrument.sh ${FUZZER}
+COPY --chown=magma:magma ${magma_root}/${fuzzer_path} ${FUZZER}
 COPY --chown=magma:magma ${magma_root}/${magma_path}/build.sh ${MAGMA}
 COPY --chown=magma:magma ${magma_root}/${target_path}/build.sh ${TARGET}
 RUN ${FUZZER}/instrument.sh

@@ -30,7 +30,7 @@ export LDLIBS="$LIBS"
     -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION no-shared no-module \
     enable-tls1_3 enable-rc5 enable-md2 enable-ec_nistp_64_gcc_128 enable-ssl3 \
     enable-ssl3-method enable-nextprotoneg enable-weak-ssl-ciphers \
-    $CFLAGS -fno-sanitize=alignment $CONFIGURE_FLAGS
+    -fno-sanitize=alignment $CONFIGURE_FLAGS
 
 make -j$(nproc) clean
 make -j$(nproc) LDCMD="$CXX $CXXFLAGS"
@@ -40,6 +40,7 @@ for f in $fuzzers; do
     fuzzer=$(basename $f)
     cp $f "$OUT/"
 done
+cp fuzz/*.0.0.*.bc "$OUT/"
 
 # Clean up
 cat $TMP_DIR/BBnames.txt | grep -v "^$"| rev | cut -d: -f2- | rev | sort | uniq > $TMP_DIR/BBnames2.txt && mv $TMP_DIR/BBnames2.txt $TMP_DIR/BBnames.txt

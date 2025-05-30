@@ -15,6 +15,8 @@ export TMP_DIR=$OUT/tmp-$1
 export CFLAGS="$CFLAGS -distance=$TMP_DIR/distance.cfg.txt"
 export CXXFLAGS="$CXXFLAGS -distance=$TMP_DIR/distance.cfg.txt"
 
+git config --global --add safe.directory /magma/targets/poppler/freetype2
+git config --global --add safe.directory /magma/targets/poppler/repo
 export WORK="$TARGET/work"
 rm -rf "$WORK"
 mkdir -p "$WORK"
@@ -35,6 +37,7 @@ EXTRA=""
 test -n "$AR" && EXTRA="$EXTRA -DCMAKE_AR=$AR"
 test -n "$RANLIB" && EXTRA="$EXTRA -DCMAKE_RANLIB=$RANLIB"
 
+export LDFLAGS="$LDFLAGS -lbrotlidec"
 cmake "$TARGET/repo" \
   $EXTRA \
   -DCMAKE_BUILD_TYPE=debug \
