@@ -113,7 +113,7 @@ ARG BUILD_FLAGS="-include ${MAGMA}/src/canary.h ${CANARIES_FLAG} ${FIXES_FLAG} $
 
 ENV CFLAGS ${BUILD_FLAGS}
 ENV CXXFLAGS ${BUILD_FLAGS}
-ENV LIBS -l:magma.o -lrt
+ENV LIBS -l:magma.a -lrt
 ENV LDFLAGS -L"${OUT}" -g
 
 # Instrument and build the target program
