@@ -15,5 +15,13 @@ mkdir -p "$SHARED/findings"
 
 export AFL_SKIP_CPUFREQ=1
 export AFL_NO_AFFINITY=1
+export AFL_NO_UI=1
+export AFL_MAP_SIZE=256000
+export AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES=1
+export AFL_IGNORE_UNKNOWN_ENVS=1
+export AFL_FAST_CAL=1
+export AFL_NO_WARN_INSTABILITY=1
+export AFL_BENIGN_PROGRAM_ABNORMAL_EXIT=1
+
 "$FUZZER/repo/afl-2.57b/afl-fuzz" -d -m none -t 1000+ -i "$TARGET/corpus/$PROGRAM" -o "$SHARED/findings" \
     $FUZZARGS -- "$OUT/$PROGRAM" $ARGS 2>&1
