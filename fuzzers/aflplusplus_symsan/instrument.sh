@@ -15,7 +15,7 @@ IR_DIR="${OUT}/clang_bc/${TARGET_NAME}"
 mkdir -p "$IR_DIR"
 
 # Build AFL++ instrumented version
-(
+build_afl() {(
     export AFL_PATH="$FUZZER/aflpp"
     export CC="$FUZZER/aflpp/afl-clang-fast"
     export CXX="$FUZZER/aflpp/afl-clang-fast++"
@@ -43,10 +43,10 @@ mkdir -p "$IR_DIR"
 
     "$MAGMA/build.sh"
     "$TARGET/build.sh"
-)
+)}
 
 # build bitcode files
-(
+build_bitcode() {(
     export CXX=clang++-14
     export CC=clang-14
     export AR=llvm-ar-14
@@ -61,61 +61,63 @@ mkdir -p "$IR_DIR"
 
     "$MAGMA/build.sh"
     "$TARGET/build.sh"
-)
+)}
 
 # static analysis
-echo "LLVMFuzzerTestOneInput" > ${IR_DIR}/BBEntry.txt
+static_analyze() {
+    echo "LLVMFuzzerTestOneInput" > ${IR_DIR}/BBEntry.txt
 
-blacklist=("XML005" "XML007" "XML013" "XML014" "XML015")
-find "$TARGET/patches/bugs" -name "*.patch" | \
-while read patch; do
-    echo "Preparing env for $patch"
-    NAME=${patch##*/}
-    BUG_ID=${NAME%.patch}
+    blacklist=("XML005" "XML007" "XML013" "XML014" "XML015")
+    find "$TARGET/patches/bugs" -name "*.patch" | \
+    while read patch; do
+        echo "Preparing env for $patch"
+        NAME=${patch##*/}
+        BUG_ID=${NAME%.patch}
 
-    if [[ " ${blacklist[@]} " =~ " ${BUG_ID} " ]]; then
-        echo "Skipping blacklisted BUG_ID: $BUG_ID"
-        continue
-    fi
+        if [[ " ${blacklist[@]} " =~ " ${BUG_ID} " ]]; then
+            echo "Skipping blacklisted BUG_ID: $BUG_ID"
+            continue
+        fi
 
-    (
-        grep "MAGMA_LOG(\"${BUG_ID}" "$TARGET/repo/" -nR | \
-            awk -F: '{print $1":"$2}' | sed 's/.*\///' \
-            > ${IR_DIR}/${BUG_ID}_BBtargets.txt
+        (
+            grep "MAGMA_LOG(\"${BUG_ID}" "$TARGET/repo/" -nR | \
+                awk -F: '{print $1":"$2}' | sed 's/.*\///' \
+                > ${IR_DIR}/${BUG_ID}_BBtargets.txt
 
-        BCS=$(find ${IR_DIR} -name "*.0.0.preopt.bc")
-        for BC in $BCS; do
-            PROGRAM="$(basename ${BC%%.0*})"
-            PREFIX="${BUG_ID}_${PROGRAM}"
-            $FUZZER/kernel-analyzer/build/lib/KAMain \
-                --entry-list=${IR_DIR}/BBEntry.txt \
-                --target-list=${IR_DIR}/${BUG_ID}_BBtargets.txt \
-                --dump-policy=${IR_DIR}/${PREFIX}_policy_reach.txt \
-                --dump-distance=${IR_DIR}/${PREFIX}_distance_reach.cfg.txt \
-                --dump-bid-mapping=${IR_DIR}/${PREFIX}_bid_loc_mapping.txt \
-                --dump-func-info=${IR_DIR}/${PREFIX}_function_info.txt \
-                --verbose=2 \
-                "${BC}" 2> ${IR_DIR}/${PREFIX}.log
+            BCS=$(find ${IR_DIR} -name "*.0.0.preopt.bc")
+            for BC in $BCS; do
+                PROGRAM="$(basename ${BC%%.0*})"
+                PREFIX="${BUG_ID}_${PROGRAM}"
+                $FUZZER/kernel-analyzer/build/lib/KAMain \
+                    --entry-list=${IR_DIR}/BBEntry.txt \
+                    --target-list=${IR_DIR}/${BUG_ID}_BBtargets.txt \
+                    --dump-policy=${IR_DIR}/${PREFIX}_policy_reach.txt \
+                    --dump-distance=${IR_DIR}/${PREFIX}_distance_reach.cfg.txt \
+                    --dump-bid-mapping=${IR_DIR}/${PREFIX}_bid_loc_mapping.txt \
+                    --dump-func-info=${IR_DIR}/${PREFIX}_function_info.txt \
+                    --verbose=2 \
+                    "${BC}" 2> ${IR_DIR}/${PREFIX}.log
 
-            cp ${IR_DIR}/${PREFIX}_distance_reach.cfg.txt \
-                ${IR_DIR}/${PREFIX}_distance.cfg.txt
-            cp ${IR_DIR}/${PREFIX}_policy_reach.txt \
-                ${IR_DIR}/${PREFIX}_policy.txt
-        done
-    )
-done
+                cp ${IR_DIR}/${PREFIX}_distance_reach.cfg.txt \
+                    ${IR_DIR}/${PREFIX}_distance.cfg.txt
+                cp ${IR_DIR}/${PREFIX}_policy_reach.txt \
+                    ${IR_DIR}/${PREFIX}_policy.txt
+            done
+        )
+    done
+}
 
 # build with SymSan instrumented version
-(
+build_symsan() {(
     export KO_CXX=clang++-14
     export KO_CC=clang-14
     export CXX=$FUZZER/symsan/build/bin/ko-clang++
     export CC=$FUZZER/symsan/build/bin/ko-clang
     export KO_DONT_OPTIMIZE=1
     export KO_USE_FASTGEN=1
-    export FUZZER_LIB="$OUT/symsan/libfuzzer-harness-fast.o"
+    export FUZZER_LIB="${IR_DIR}/libfuzzer-harness-fast.o"
 
-    ZLIB_TARGETS=(libpng)
+    ZLIB_TARGETS=(libpng libtiff)
     if [[ " ${ZLIB_TARGETS[@]} " =~ " $TARGET_NAME " ]]; then
         export LIBS="$LIBS $FUZZER/zlib-1.2.13/libz.a"
         export KO_NO_NATIVE_ZLIB=1
@@ -149,6 +151,16 @@ done
             -load-pass-plugin="${OBJ_PATH}/TaintPass.so" -passes=taint \
             $OPTFLAGS -disable-verify -o $IBC $BC
         llc-14 -filetype=obj --relocation-model=pic -o $IOBJ $IBC
-        $CXX $CXXFLAGS $IOBJ $FUZZER_LIB $LDFLAGS $LIBS -o ${PROGRAM}.taint
+        with_main=$(llvm-nm-14 $BC | grep -c -- "main") || true
+        if [[ $with_main -eq 0 ]]; then
+            LIBS="$LIBS $FUZZER_LIB"
+        fi
+        $CXX $CXXFLAGS $IOBJ $LDFLAGS $LIBS -o ${PROGRAM}.taint
     done
-)
+)}
+
+build_afl
+build_bitcode
+static_analyze
+build_symsan
+
