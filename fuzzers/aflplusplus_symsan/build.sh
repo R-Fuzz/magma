@@ -26,6 +26,14 @@ fi
     CC=clang-14 CXX=clang++-14 cmake -DAFLPP_PATH=$FUZZER/aflpp \
         -DCMAKE_INSTALL_PREFIX=. ../
     make -j$(nproc)
+    export KO_CC=clang-14
+    export KO_CXX=clang++-14
+    make install
+    # rebuild libc++
+    cd ../libcxx
+    ./rebuild.sh ../build/bin/ko-clang
+    # install new libc++
+    cd ../build/
     make install
 )
 
