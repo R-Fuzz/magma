@@ -6,7 +6,7 @@ apt-get install -y \
     make build-essential cmake \
     python3-minimal python-is-python3 zlib1g-dev git joe libprotobuf-dev \
     libz3-dev libboost-container-dev python3-dev libgoogle-perftools-dev \
-    wget lsb-release software-properties-common gnupg2 curl
+    wget lsb-release software-properties-common gnupg2 curl ninja-build
 
 curl -O https://apt.llvm.org/llvm.sh \
     && chmod +x llvm.sh \
