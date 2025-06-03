@@ -115,7 +115,8 @@ build_symsan() {(
     export CC=$FUZZER/symsan/build/bin/ko-clang
     export KO_DONT_OPTIMIZE=1
     export KO_USE_FASTGEN=1
-    export FUZZER_LIB="${IR_DIR}/libfuzzer-harness-fast.o"
+    export FUZZER_LIB="$OUT/libfuzzer-harness-fast.o"
+    $CC $CFLAGS -c -fPIC -o $FUZZER_LIB $FUZZER/symsan/driver/harness-proxy.c
 
     ZLIB_TARGETS=(libpng libtiff)
     if [[ " ${ZLIB_TARGETS[@]} " =~ " $TARGET_NAME " ]]; then
