@@ -15,19 +15,25 @@ fi
 
 cd "$TARGET/repo"
 ./autogen.sh \
-	--with-zlib=/magma/targets/libxml2/zlib-1.2.13/build \
+	--with-zlib=$FUZZER/zlib-1.2.13/build \
 	--with-http=no \
 	--with-python=no \
-	--with-lzma=yes \
+	--with-lzma=no \
 	--with-threads=no \
 	--disable-shared
 make -j$(nproc) clean
 make -j$(nproc) all
 
 cp xmllint "$OUT/"
+if [ -f "xmllint.0.0.preopt.bc" ]; then
+    cp xmllint.*.bc "$OUT/"
+fi
 
 for fuzzer in libxml2_xml_read_memory_fuzzer libxml2_xml_reader_for_file_fuzzer; do
   $CXX $CXXFLAGS -std=c++11 -Iinclude/ -I"$TARGET/src/" \
-      "$TARGET/src/$fuzzer.cc" -o "$OUT/$fuzzer" \
+      "$TARGET/src/$fuzzer.cc" -c -o "$OUT/$fuzzer.o"
+
+  $CXX $CXXFLAGS -std=c++11 -Iinclude/ -I"$TARGET/src/" \
+      "$OUT/$fuzzer.o" -o "$OUT/$fuzzer" \
       .libs/libxml2.a $LDFLAGS $LIBS $FUZZER_LIB -lz -llzma
 done
