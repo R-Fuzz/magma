@@ -95,6 +95,7 @@ static_analyze() {
                     --dump-distance=${IR_DIR}/${PREFIX}_distance_reach.cfg.txt \
                     --dump-bid-mapping=${IR_DIR}/${PREFIX}_bid_loc_mapping.txt \
                     --dump-func-info=${IR_DIR}/${PREFIX}_function_info.txt \
+                    --type-based-callgraph=1 \
                     --verbose=2 \
                     "${BC}" 2> ${IR_DIR}/${PREFIX}.log
 

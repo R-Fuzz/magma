@@ -10,5 +10,5 @@ git clone --depth 1 -b v4.32c https://github.com/AFLplusplus/AFLplusplus "$FUZZE
 
 git clone --depth 1 -b mzt https://github.com/ChengyuSong/kernel-analyzer.git "$FUZZER/kernel-analyzer"
 
-git clone --depth 1 https://github.com/r-fuzz/symsan.git "$FUZZER/symsan"
+git clone --depth 1 -b magma https://github.com/r-fuzz/symsan.git "$FUZZER/symsan"
 
