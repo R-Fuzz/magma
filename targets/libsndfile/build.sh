@@ -15,8 +15,15 @@ fi
 
 cd "$TARGET/repo"
 ./autogen.sh
-./configure --disable-shared --enable-ossfuzzers
+./configure --disable-shared --enable-ossfuzzers \
+    --disable-sqlite \
+    --disable-alsa \
+    --disable-external-libs \
+    --disable-mpeg
 make -j$(nproc) clean
 make -j$(nproc) ossfuzz/sndfile_fuzzer
 
 cp -v ossfuzz/sndfile_fuzzer $OUT/
+if [ -f "ossfuzz/sndfile_fuzzer.0.0.preopt.bc" ]; then
+    cp ossfuzz/sndfile_fuzzer.*.bc $OUT/
+fi
