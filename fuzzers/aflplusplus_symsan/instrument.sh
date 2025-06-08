@@ -127,6 +127,12 @@ build_symsan() {(
         unset KO_NO_NATIVE_ZLIB
     fi
 
+    if [ "lua" = ${TARGET_NAME} ]; then
+        TERMCAP="$FUZZER/termcap-1.3.1/libtermcap.a"
+        READLINE="$FUZZER/readline-8.1.2/libreadline.a"
+        export LIBS="$LIBS $READLINE $TERMCAP"
+    fi
+
     export OUT="$OUT/symsan"
     export LDFLAGS="$LDFLAGS -L$OUT"
 

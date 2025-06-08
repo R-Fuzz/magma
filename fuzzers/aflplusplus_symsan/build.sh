@@ -44,19 +44,38 @@ fi
     make LLVM_BUILD=/usr/lib/llvm-14/ -j$(nproc)
 )
 
-# build symsan instrumented zlib
+# build symsan instrumented libs
 (
     cd "$FUZZER"
-    wget https://github.com/madler/zlib/archive/refs/tags/v1.2.13.tar.gz
-    tar -xzf v1.2.13.tar.gz
-    cd zlib-1.2.13
     export KO_CXX=clang++-14
     export KO_CC=clang-14
     export CXX=$FUZZER/symsan/build/bin/ko-clang++
     export CC=$FUZZER/symsan/build/bin/ko-clang
     export KO_NO_NATIVE_ZLIB=1
+
+    #zlib
+    wget https://github.com/madler/zlib/archive/refs/tags/v1.2.13.tar.gz
+    tar zxf v1.2.13.tar.gz
+    pushd zlib-1.2.13
     ./configure --static --prefix=$FUZZER/zlib-1.2.13/zlib-1.2.13
     make -j$(nproc) all
+    popd
+
+    #readline
+    wget https://ftp.gnu.org/gnu/readline/readline-8.1.2.tar.gz
+    tar zxf readline-8.1.2.tar.gz
+    pushd readline-8.1.2
+    ./configure --disable-shared
+    make -j$(nproc)
+    popd
+
+    #termcap
+    wget https://ftp.gnu.org/gnu/termcap/termcap-1.3.1.tar.gz
+    tar zxf termcap-1.3.1.tar.gz
+    pushd termcap-1.3.1
+    ./configure --disable-shared
+    make -j$(nproc)
+    popd
 )
 
 # prepare output dirs
