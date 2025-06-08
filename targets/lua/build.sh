@@ -23,3 +23,6 @@ cp liblua.a "$OUT/"
 # build driver
 make -j$(nproc) lua
 cp lua "$OUT/"
+if [ -f "lua.0.0.preopt.bc" ]; then
+    cp lua.*.bc "$OUT/"
+fi
