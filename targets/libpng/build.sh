@@ -36,4 +36,4 @@ $CXX $CXXFLAGS -std=c++14 -I. -c contrib/oss-fuzz/libpng_read_fuzzer.cc \
 $CXX $CXXFLAGS -std=c++14 -I. \
     $OUT/libpng_read_fuzzer.o \
     -o $OUT/libpng_read_fuzzer \
-    $LDFLAGS .libs/libpng16.a $LIBS $FUZZER_LIB -lz
+    $LDFLAGS .libs/libpng16.a $LIBS -lz

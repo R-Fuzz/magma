@@ -39,4 +39,4 @@ $CXX $CXXFLAGS -std=c++11 -I$WORK/include \
     $OUT/tiff_read_rgba_fuzzer.o -o $OUT/tiff_read_rgba_fuzzer \
     $WORK/lib/libtiffxx.a $WORK/lib/libtiff.a \
     -lz -Wl,-Bstatic -Wl,-Bdynamic \
-    $LDFLAGS $LIBS $FUZZER_LIB
+    $LDFLAGS $LIBS

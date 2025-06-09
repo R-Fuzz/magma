@@ -35,5 +35,5 @@ for fuzzer in libxml2_xml_read_memory_fuzzer libxml2_xml_reader_for_file_fuzzer;
 
   $CXX $CXXFLAGS -std=c++11 -Iinclude/ -I"$TARGET/src/" \
       "$OUT/$fuzzer.o" -o "$OUT/$fuzzer" \
-      .libs/libxml2.a $LDFLAGS $LIBS $FUZZER_LIB -lz -llzma
+      .libs/libxml2.a $LDFLAGS $LIBS -lz
 done
