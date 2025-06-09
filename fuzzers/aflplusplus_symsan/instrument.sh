@@ -52,12 +52,19 @@ build_bitcode() {(
     export AR=llvm-ar-14
 
     export OUT="$IR_DIR"
-    export LDFLAGS="$LDFLAGS -g -L$OUT -fuse-ld=lld-14 -Wl,-plugin-opt=save-temps"
-    export FUZZER_LIB="$OUT/libfuzzer-harness-fast.o"
-    $CC $CFLAGS -c -fPIC -o $FUZZER_LIB $FUZZER/symsan/driver/harness-proxy.c
+    export LDFLAGS="$LDFLAGS -g -L$OUT -stdlib=libc++ -fuse-ld=lld-14 -Wl,-plugin-opt=save-temps"
+    export FUZZER_LIB="$OUT/libfuzzer-harness-fast.a"
+    $CC $CFLAGS -c -fPIC -o $OUT/harness-proxy.o $FUZZER/symsan/driver/harness-proxy.c
+    $AR rcu $FUZZER_LIB $OUT/harness-proxy.o
 
     export CFLAGS="$CFLAGS -O0 -g -flto"
     export CXXFLAGS="$CXXFLAGS -O0 -g -flto -stdlib=libc++"
+
+    DYNAMIC_TARGETS=(poppler)
+    TARGET_NAME="$(basename $TARGET)"
+    if [[ ! " ${DYNAMIC_TARGETS[@]} " =~ " $TARGET_NAME " ]]; then
+        export LIBS="$LIBS $FUZZER_LIB"
+    fi
 
     "$MAGMA/build.sh"
     "$TARGET/build.sh"
@@ -79,8 +86,13 @@ static_analyze() {
             continue
         fi
 
+        SRC_DIR=$TARGET/repo/
+        if [ "sqlite3" = $TARGET_NAME ]; then
+            SRC_DIR=$TARGET/work/
+        fi
+
         (
-            grep "MAGMA_LOG(\"${BUG_ID}" "$TARGET/repo/" -nR | \
+            grep "MAGMA_LOG(\"${BUG_ID}" "$SRC_DIR" -nR | \
                 awk -F: '{print $1":"$2}' | sed 's/.*\///' \
                 > ${IR_DIR}/${BUG_ID}_BBtargets.txt
 

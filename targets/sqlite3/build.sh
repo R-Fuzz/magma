@@ -28,12 +28,15 @@ export CFLAGS="$CFLAGS -DSQLITE_MAX_LENGTH=128000000 \
                -DSQLITE_DEBUG=1 \
                -DSQLITE_MAX_PAGE_COUNT=16384"
 
-"$TARGET/repo"/configure --disable-shared --enable-rtree
+"$TARGET/repo"/configure --disable-shared --enable-rtree --enable-fts5
 make clean
 make -j$(nproc)
 make sqlite3.c
 
 $CC $CFLAGS -I. \
-    "$TARGET/repo/test/ossfuzz.c" "./sqlite3.o" \
+    "$TARGET/repo/test/ossfuzz.c" -c -o "$WORK/ossfuzz.o"
+
+$CC $CFLAGS -I. \
+    "$WORK/ossfuzz.o" "./sqlite3.o" \
     -o "$OUT/sqlite3_fuzz" \
     $LDFLAGS $LIBS -pthread -ldl -lm
