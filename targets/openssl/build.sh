@@ -16,15 +16,15 @@ fi
 # build the libpng library
 cd "$TARGET/repo"
 
-CONFIGURE_FLAGS=""
-if [[ $CFLAGS = *sanitize=memory* ]]; then
-  CONFIGURE_FLAGS="no-asm"
-fi
+CONFIGURE_FLAGS="no-asm"
 
 # the config script supports env var LDLIBS instead of LIBS
 export LDLIBS="$LIBS"
 
-./config --debug enable-fuzz-libfuzzer enable-fuzz-afl disable-tests -DPEDANTIC \
+$AR rcs "${FUZZER_LIB}.a" "$FUZZER_LIB"
+
+./config --debug enable-fuzz-libfuzzer disable-tests -DPEDANTIC \
+    --with-fuzzer-lib=$FUZZER_LIB \
     -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION no-shared no-module \
     enable-tls1_3 enable-rc5 enable-md2 enable-ec_nistp_64_gcc_128 enable-ssl3 \
     enable-ssl3-method enable-nextprotoneg enable-weak-ssl-ciphers \
@@ -37,4 +37,7 @@ fuzzers=$(find fuzz -executable -type f '!' -name \*.py '!' -name \*-test '!' -n
 for f in $fuzzers; do
     fuzzer=$(basename $f)
     cp $f "$OUT/"
+    if [ -f "${f}.0.0.preopt.bc" ]; then
+        cp ${f}.*.bc "$OUT/"
+    fi
 done
