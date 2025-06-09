@@ -149,6 +149,7 @@ build_symsan() {(
     fi
 
     pushd $OUT
+    ORIG_LIBS="$LIBS" # make a backup
     BCS=$(find ${IR_DIR} -name "*.0.0.preopt.bc")
     for BC in $BCS; do
         PROGRAM="$(basename ${BC%%.0*})"
@@ -159,9 +160,11 @@ build_symsan() {(
             -load-pass-plugin="${OBJ_PATH}/TaintPass.so" -passes=taint \
             $OPTFLAGS -disable-verify -o $IBC $BC
         llc-14 -filetype=obj --relocation-model=pic -o $IOBJ $IBC
-        with_main=$(llvm-nm-14 $BC | grep -c -- "main") || true
+        with_main=$(llvm-nm-14 $BC | grep -c -- " main$") || true
         if [[ $with_main -eq 0 ]]; then
-            LIBS="$LIBS $FUZZER_LIB"
+            LIBS="$ORIG_LIBS $FUZZER_LIB"
+        else
+            LIBS="$ORIG_LIBS"
         fi
         $CXX $CXXFLAGS $IOBJ $LDFLAGS $LIBS -o ${PROGRAM}.taint
     done
