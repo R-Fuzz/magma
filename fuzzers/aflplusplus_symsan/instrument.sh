@@ -94,6 +94,7 @@ static_analyze() {
                 awk -F: '{print $1":"$2}' | sed 's/.*\///' \
                 > ${IR_DIR}/${BUG_ID}_BBtargets.txt
 
+            BCS=""
             BCS=$(find ${IR_DIR} -name "*.0.0.preopt.bc")
             for BC in $BCS; do
                 PROGRAM="$(basename ${BC%%.0*})"
@@ -137,12 +138,6 @@ build_symsan() {(
         unset KO_NO_NATIVE_ZLIB
     fi
 
-    if [ "lua" = ${TARGET_NAME} ]; then
-        TERMCAP="$FUZZER/termcap-1.3.1/libtermcap.a"
-        READLINE="$FUZZER/readline-8.1.2/libreadline.a"
-        export LIBS="$LIBS $READLINE $TERMCAP"
-    fi
-
     export OUT="$OUT/symsan"
     export LDFLAGS="$LDFLAGS -L$OUT"
 
@@ -158,7 +153,25 @@ build_symsan() {(
         OPTFLAGS="$OPTFLAGS -taint-solve-ub=true"
     fi
 
-    if [ "poppler" = $TARGET_NAME ]; then
+    if [ "lua" = ${TARGET_NAME} ]; then
+        TERMCAP="$FUZZER/termcap-1.3.1/libtermcap.a"
+        READLINE="$FUZZER/readline-8.1.2/libreadline.a"
+        export LIBS="$LIBS $READLINE $TERMCAP"
+    elif [ "php" = $TARGET_NAME ]; then
+        OPTFLAGS="$OPTFLAGS -taint-abilist=${FUZZER}/src/icu.txt"
+        OPTFLAGS="$OPTFLAGS -taint-abilist=${FUZZER}/src/php.txt"
+        (
+            pushd $TARGET/repo/oniguruma
+            make -j$(nproc) clean
+            make distclean
+            ./configure --disable-shared
+            make -j$(nproc)
+            popd
+        )
+        LIBS="$LIBS $TARGET/repo/Zend/asm/make_x86_64_sysv_elf_gas.o"
+        LIBS="$LIBS $TARGET/repo/Zend/asm/jump_x86_64_sysv_elf_gas.o"
+        LIBS="$LIBS -L$TARGET/repo/oniguruma/src/.libs -l:libonig.a -licuio -licui18n -licuuc -licudata"
+    elif [ "poppler" = $TARGET_NAME ]; then
         OPTFLAGS="$OPTFLAGS -taint-abilist=${FUZZER}/src/poppler.txt"
         CXXFLAGS="$CXXFLAGS -fuse-ld=lld-14"
         LIBS="$LIBS -lbrotlidec -ljpeg -lz -lopenjp2 -lpng -ltiff -llcms2 -lm -lpthread -pthread"
@@ -174,7 +187,7 @@ build_symsan() {(
 
         opt-14 -load "${OBJ_PATH}/TaintPass.so" \
             -load-pass-plugin="${OBJ_PATH}/TaintPass.so" -passes=taint \
-            $OPTFLAGS -disable-verify -o $IBC $BC
+            $OPTFLAGS -o $IBC $BC
         llc-14 -filetype=obj --relocation-model=pic -o $IOBJ $IBC
         with_main=$(llvm-nm-14 $BC | grep -c -- " main$") || true
         if [[ $with_main -eq 0 ]]; then
