@@ -22,7 +22,6 @@ build_afl() {(
 
     # Some targets cannot directly link the libfuzz driver
     DYNAMIC_TARGETS=(poppler)
-    TARGET_NAME="$(basename $TARGET)"
     if [[ ! " ${DYNAMIC_TARGETS[@]} " =~ " $TARGET_NAME " ]]; then
         export LIBS="$LIBS $FUZZER/aflpp/utils/aflpp_driver/libAFLDriver.a"
     fi
@@ -30,7 +29,6 @@ build_afl() {(
 
     # Some targets do not support a static AFL memory region
     DYNAMIC_TARGETS=(php openssl)
-    TARGET_NAME="$(basename $TARGET)"
     if [[ " ${DYNAMIC_TARGETS[@]} " =~ " $TARGET_NAME " ]]; then
         export AFL_LLVM_MAP_DYNAMIC=1
     fi
@@ -50,6 +48,7 @@ build_bitcode() {(
     export CXX=clang++-14
     export CC=clang-14
     export AR=llvm-ar-14
+    export RANLIB=llvm-ranlib-14
 
     export OUT="$IR_DIR"
     export LDFLAGS="$LDFLAGS -g -L$OUT -stdlib=libc++ -fuse-ld=lld-14 -Wl,-plugin-opt=save-temps"
@@ -61,7 +60,6 @@ build_bitcode() {(
     export CXXFLAGS="$CXXFLAGS -O0 -g -flto -stdlib=libc++"
 
     DYNAMIC_TARGETS=(poppler)
-    TARGET_NAME="$(basename $TARGET)"
     if [[ ! " ${DYNAMIC_TARGETS[@]} " =~ " $TARGET_NAME " ]]; then
         export LIBS="$LIBS $FUZZER_LIB"
     fi
@@ -158,6 +156,12 @@ build_symsan() {(
     fi
     if [[ "$KO_SOLVE_UB" = 1 ]]; then
         OPTFLAGS="$OPTFLAGS -taint-solve-ub=true"
+    fi
+
+    if [ "poppler" = $TARGET_NAME ]; then
+        OPTFLAGS="$OPTFLAGS -taint-abilist=${FUZZER}/src/poppler.txt"
+        CXXFLAGS="$CXXFLAGS -fuse-ld=lld-14"
+        LIBS="$LIBS -lbrotlidec -ljpeg -lz -lopenjp2 -lpng -ltiff -llcms2 -lm -lpthread -pthread"
     fi
 
     pushd $OUT
