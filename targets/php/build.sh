@@ -22,7 +22,7 @@ export EXTRA_CFLAGS="$CFLAGS -fno-sanitize=object-size"
 export EXTRA_CXXFLAGS="$CXXFLAGS -fno-sanitize=object-size"
 
 unset CFLAGS
-unset CXXFLAGS
+#unset CXXFLAGS
 
 #build the php library
 ./buildconf
@@ -57,6 +57,12 @@ sapi/cli/php sapi/fuzzer/generate_parser_corpus.php
 FUZZERS="php-fuzz-json php-fuzz-exif php-fuzz-mbstring php-fuzz-unserialize php-fuzz-parser"
 for fuzzerName in $FUZZERS; do
 	cp sapi/fuzzer/$fuzzerName "$OUT/${fuzzerName/php-fuzz-/}"
+    if [ -f "sapi/fuzzer/${fuzzerName}.0.0.preopt.bc" ]; then
+        ls sapi/fuzzer/${fuzzerName}.*.bc | while read f; do
+            fn=$(basename $f)
+            cp $f "$OUT/${fn/php-fuzz-/}"
+        done
+    fi
 done
 
 for fuzzerName in `ls sapi/fuzzer/corpus`; do
