@@ -1,4 +1,4 @@
 tools/captain/
-poc_*.tar.gz
+poc/
 targets/*/repo/
 docker_images/
