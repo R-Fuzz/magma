@@ -27,7 +27,8 @@ set -xe
 
     export CXXFLAGS="$CXXFLAGS -O0 -g -flto -fuse-ld=lld-12 -Wl,-plugin-opt=save-temps"
     export CFLAGS="$CFLAGS -O0 -g -flto -fuse-ld=lld-12 -Wl,-plugin-opt=save-temps"
-
+    export FUZZER_LIB="-l:libfuzzer-harness-fast.o -lstdc++"
+    
     "$TARGET/build_bc.sh"
 )
 
@@ -104,6 +105,6 @@ while read patch; do
 
         mkdir -p $OUT
         "$MAGMA/build.sh"
-        "$TARGET/build.sh"
+        "$TARGET/build_zlib.sh"
     )
 done
