@@ -12,7 +12,7 @@
 ##
 
 if nm "$OUT/afl/$PROGRAM" | grep -E '^[0-9a-f]+\s+[Ww]\s+main$'; then
-    ARGS="-"
+    ARGS="@@"
 fi
 
 mkdir -p "$SHARED/findings"
@@ -33,11 +33,14 @@ done
 
 ulimit -c unlimited
 
+#export AFL_DISABLE_TRIM=1
 export AFL_CUSTOM_MUTATOR_LIBRARY="$FUZZER/symsan/build/bin/libSymSanMutator.so"
 export SYMSAN_TARGET="$OUT/symsan/${PROGRAM}.taint"
 export SYMSAN_SOLVE_UB=1
 export SYMSAN_USE_JIGSAW=1
+#export SYMSAN_SAVE_SOLVED=1
+#export AFL_CUSTOM_MUTATOR_ONLY=1
 
-"$FUZZER/aflpp/afl-fuzz" -d -t 1000+ -m none \
+"$FUZZER/aflpp/afl-fuzz" -m none \
     -i "$TARGET/corpus/$PROGRAM" -o "$SHARED/findings" \
     $DICT $FUZZARGS -- "$OUT/afl/$PROGRAM" $ARGS 2>&1
