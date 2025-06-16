@@ -1,0 +1,102 @@
+diff --git a/instrumentation/SanitizerCoverageLTO.so.cc b/instrumentation/SanitizerCoverageLTO.so.cc
+index c27ff36..4fad757 100644
+--- a/instrumentation/SanitizerCoverageLTO.so.cc
++++ b/instrumentation/SanitizerCoverageLTO.so.cc
+@@ -50,6 +50,7 @@
+ #include "llvm/Support/SpecialCaseList.h"
+ #include "llvm/Support/VirtualFileSystem.h"
+ #include "llvm/Support/raw_ostream.h"
++#include "llvm/Support/DJB.h"
+ #if LLVM_VERSION_MAJOR < 20
+   #include "llvm/Transforms/Instrumentation.h"
+ #else
+@@ -2197,6 +2198,61 @@ void ModuleSanitizerCoverageLTO::InjectCoverageForIndirectCalls(
+ 
+ */
+ 
++static inline void getInsDebugLoc(const Instruction *I, StringRef &Filename,
++                                  unsigned &Line, unsigned &Col) {
++  if (DILocation *Loc = I->getDebugLoc()) {
++    Line = Loc->getLine();
++    Filename = Loc->getFilename();
++    Col = Loc->getColumn();
++    if (Filename.empty()) {
++      DILocation *oDILoc = Loc->getInlinedAt();
++      if (oDILoc) {
++        Line = oDILoc->getLine();
++        Col = oDILoc->getColumn();
++        Filename = oDILoc->getFilename();
++      }
++    }
++  }
++}
++
++static inline void getBBDebugLoc(const BasicBlock *BB, std::string &Filename, unsigned &Line, unsigned &Col) {
++  std::string bb_name("");
++  StringRef filename;
++  unsigned line = 0;
++  unsigned col = 0;
++  for (auto &I : *BB) {
++    getInsDebugLoc(&I, filename, line, col);
++    if (filename.empty() || line == 0 || filename.startswith("/usr/"))
++      continue;
++    std::size_t found = filename.find_last_of("/\\");
++    if (found != std::string::npos)
++      filename = filename.substr(found + 1);
++    Filename = filename.str();
++    Line = line;
++    Col = col;
++    break;
++  }
++}
++
++uint32_t getBasicBlockId(const BasicBlock *BB) {
++  static uint32_t unamed = 0;
++  std::string bb_name_with_col("");
++  std::string filename;
++  unsigned line = 0;
++  unsigned col = 0;
++  getBBDebugLoc(BB, filename, line, col);
++  if (!filename.empty() && line != 0 ) {
++    bb_name_with_col = filename + ":" + std::to_string(line) + ":" + std::to_string(col);
++  } else {
++    filename = BB->getParent()->getParent()->getSourceFileName();
++    std::size_t found = filename.find_last_of("/\\");
++    if (found != std::string::npos)
++      filename = filename.substr(found + 1);
++    bb_name_with_col = filename + ":unamed:" + std::to_string(unamed++);
++  }
++  return djbHash(bb_name_with_col);
++}
++
+ void ModuleSanitizerCoverageLTO::InjectCoverageAtBlock(Function   &F,
+                                                        BasicBlock &BB,
+                                                        size_t      Idx,
+@@ -2235,9 +2291,25 @@ void ModuleSanitizerCoverageLTO::InjectCoverageAtBlock(Function   &F,
+ 
+       unsigned long long int moduleID =
+           (((unsigned long long int)(rand() & 0xffffffff)) << 32) | getpid();
+-      dFile << "ModuleID=" << moduleID << " Function=" << F.getName().str()
+-            << " edgeID=" << afl_global_id << "\n";
+ 
++      std::string filename;
++      unsigned line = 0;
++      unsigned col = 0;
++      getBBDebugLoc(&BB, filename, line, col);
++
++      uint32_t bid = getBasicBlockId(&BB);
++
++      dFile << "ModuleID=" << moduleID
++            << " Function=" << F.getName().str()
++            << " edgeID=" << afl_global_id;
++
++      if (!filename.empty() && line != 0) {
++        dFile << " Location=" << filename << ":" << line;
++      } else {
++        dFile << " Location=Unknown";
++      }
++
++      dFile << " bid=" << bid << "\n";
+     }
+ 
+     /* Set the ID of the inserted basic block */
