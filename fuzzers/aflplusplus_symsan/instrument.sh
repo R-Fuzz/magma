@@ -14,6 +14,8 @@ TARGET_NAME="$(basename $TARGET)"
 IR_DIR="${OUT}/clang_bc/${TARGET_NAME}"
 mkdir -p "$IR_DIR"
 
+FUZZ_INDIVIDUAL_BUG=0
+
 # Build AFL++ instrumented version
 build_afl() {(
     export AFL_PATH="$FUZZER/aflpp"
@@ -64,6 +66,19 @@ build_bitcode() {(
         export LIBS="$LIBS $FUZZER_LIB"
     fi
 
+    ZLIB_TARGETS=(libpng libtiff)
+    if [[ " ${ZLIB_TARGETS[@]} " =~ " $TARGET_NAME " ]]; then
+        cp $FUZZER/zlib-1.2.13/libz.a $OUT
+        export LIBS="$LIBS $OUT/libz.a"
+    fi
+
+    if [ "lua" = ${TARGET_NAME} ]; then
+        #readline
+        cp $FUZZER/readline-8.1.2/libreadline.a $OUT
+        cp $FUZZER/termcap-1.3.1/libtermcap.a $OUT
+        export LIBS="$LIBS $OUT/libtermcap.a $OUT/libreadline.a"
+    fi
+
     "$MAGMA/build.sh"
     "$TARGET/build.sh"
 )}
@@ -95,7 +110,9 @@ static_analyze() {
                 > ${IR_DIR}/${BUG_ID}_BBtargets.txt
 
             BCS=""
-            BCS=$(find ${IR_DIR} -name "*.0.0.preopt.bc")
+            if [[ $FUZZ_INDIVIDUAL_BUG -eq 1 ]]; then
+                BCS=$(find ${IR_DIR} -name "*.0.0.preopt.bc")
+            fi
             for BC in $BCS; do
                 PROGRAM="$(basename ${BC%%.0*})"
                 PREFIX="${BUG_ID}_${PROGRAM}"
@@ -117,6 +134,24 @@ static_analyze() {
             done
         )
     done
+
+    if [[ $FUZZ_INDIVIDUAL_BUG -eq 0 ]]; then
+        # build a combined policy
+        cat ${IR_DIR}/*_BBtargets.txt > ${IR_DIR}/BBTargets.txt
+        BCS=$(find ${IR_DIR} -name "*.0.0.preopt.bc")
+        for BC in $BCS; do
+            PROGRAM="$(basename ${BC%%.0*})"
+            PREFIX="${PROGRAM}"
+            $FUZZER/kernel-analyzer/build/lib/KAMain \
+                --entry-list=${IR_DIR}/BBEntry.txt \
+                --target-list=${IR_DIR}/BBTargets.txt \
+                --dump-policy=${IR_DIR}/${PREFIX}_policy.txt \
+                --dump-annotated-ir="_distance.bc" \
+                --type-based-callgraph=1 \
+                --verbose=2 \
+                "${BC}" 2> ${IR_DIR}/${PREFIX}.log
+        done
+    fi
 }
 
 # build with SymSan instrumented version
@@ -132,7 +167,6 @@ build_symsan() {(
 
     ZLIB_TARGETS=(libpng libtiff)
     if [[ " ${ZLIB_TARGETS[@]} " =~ " $TARGET_NAME " ]]; then
-        export LIBS="$LIBS $FUZZER/zlib-1.2.13/libz.a"
         export KO_NO_NATIVE_ZLIB=1
     else
         unset KO_NO_NATIVE_ZLIB
@@ -153,24 +187,12 @@ build_symsan() {(
         OPTFLAGS="$OPTFLAGS -taint-solve-ub=true"
     fi
 
-    if [ "lua" = ${TARGET_NAME} ]; then
-        TERMCAP="$FUZZER/termcap-1.3.1/libtermcap.a"
-        READLINE="$FUZZER/readline-8.1.2/libreadline.a"
-        export LIBS="$LIBS $READLINE $TERMCAP"
-    elif [ "php" = $TARGET_NAME ]; then
+    if [ "php" = $TARGET_NAME ]; then
         OPTFLAGS="$OPTFLAGS -taint-abilist=${FUZZER}/src/icu.txt"
         OPTFLAGS="$OPTFLAGS -taint-abilist=${FUZZER}/src/php.txt"
-        (
-            pushd $TARGET/repo/oniguruma
-            make -j$(nproc) clean
-            make distclean
-            ./configure --disable-shared
-            make -j$(nproc)
-            popd
-        )
         LIBS="$LIBS $TARGET/repo/Zend/asm/make_x86_64_sysv_elf_gas.o"
         LIBS="$LIBS $TARGET/repo/Zend/asm/jump_x86_64_sysv_elf_gas.o"
-        LIBS="$LIBS -L$TARGET/repo/oniguruma/src/.libs -l:libonig.a -licuio -licui18n -licuuc -licudata"
+        LIBS="$LIBS -licuio -licui18n -licuuc -licudata"
     elif [ "poppler" = $TARGET_NAME ]; then
         OPTFLAGS="$OPTFLAGS -taint-abilist=${FUZZER}/src/poppler.txt"
         CXXFLAGS="$CXXFLAGS -fuse-ld=lld-14"
@@ -185,6 +207,9 @@ build_symsan() {(
         IBC="${PROGRAM}.taint.bc"
         IOBJ="${PROGRAM}.taint.o"
 
+        if [[ -f ${BC}_distance.bc ]]; then
+            BC=${BC}_distance.bc
+        fi
         opt-14 -load "${OBJ_PATH}/TaintPass.so" \
             -load-pass-plugin="${OBJ_PATH}/TaintPass.so" -passes=taint \
             $OPTFLAGS -o $IBC $BC
