@@ -21,6 +21,7 @@ export ONIG_LIBS="-L$PWD/oniguruma/src/.libs -l:libonig.a"
 export EXTRA_CFLAGS="$CFLAGS -fno-sanitize=object-size"
 export EXTRA_CXXFLAGS="$CXXFLAGS -fno-sanitize=object-size"
 
+OLD_CFLAGS=$CFLAGS
 unset CFLAGS
 #unset CXXFLAGS
 
@@ -42,11 +43,13 @@ LIB_FUZZING_ENGINE="-Wall" ./configure \
 make -j$(nproc) clean
 
 # build oniguruma and link statically
+export CFLAGS=$OLD_CFLAGS
 pushd oniguruma
 autoreconf -vfi
 ./configure --disable-shared
 make -j$(nproc)
 popd
+unset CFLAGS
 
 make -j$(nproc)
 

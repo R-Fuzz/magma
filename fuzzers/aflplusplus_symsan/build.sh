@@ -45,7 +45,7 @@ fi
 )
 
 # build symsan instrumented libs
-(
+_comment() {(
     cd "$FUZZER"
     export KO_CXX=clang++-14
     export KO_CC=clang-14
@@ -73,6 +73,44 @@ fi
     wget https://ftp.gnu.org/gnu/termcap/termcap-1.3.1.tar.gz
     tar zxf termcap-1.3.1.tar.gz
     pushd termcap-1.3.1
+    ./configure --disable-shared
+    make -j$(nproc)
+    popd
+)}
+
+# build libs in llvm bitcode for lto
+(
+    cd "$FUZZER"
+    export CC=clang-14
+    export AR=llvm-ar-14
+    export RANLIB=llvm-ranlib-14
+    export CFLAGS="-O0 -g -flto"
+    export LDFLAGS="-fuse-ld=lld-14"
+    unset LIBS
+
+    #zlib
+    wget https://github.com/madler/zlib/archive/refs/tags/v1.2.13.tar.gz
+    tar zxf v1.2.13.tar.gz
+    pushd zlib-1.2.13
+    ./configure --static
+    make -j$(nproc) all
+    popd
+
+    #termcap
+    wget https://ftp.gnu.org/gnu/termcap/termcap-1.3.1.tar.gz
+    tar zxf termcap-1.3.1.tar.gz
+    pushd termcap-1.3.1
+    ./configure --disable-shared
+    # patch Makefile
+    sed -i 's/AR = ar/AR = llvm-ar-14/' Makefile
+    sed -i 's/CFLAGS = -g/CFLAGS = -O0 -g -flto/' Makefile
+    make -j$(nproc)
+    popd
+
+    #readline
+    wget https://ftp.gnu.org/gnu/readline/readline-8.1.2.tar.gz
+    tar zxf readline-8.1.2.tar.gz
+    pushd readline-8.1.2
     ./configure --disable-shared
     make -j$(nproc)
     popd
