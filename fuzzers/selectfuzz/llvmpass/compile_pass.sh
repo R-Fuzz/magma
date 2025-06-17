@@ -15,4 +15,4 @@ mkdir $BUILD_DIR
 cd $BUILD_DIR
 
 cmake ../
-make clean; make -j4
+make clean; make -j
