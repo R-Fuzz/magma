@@ -60,7 +60,7 @@ generate_cg_cfg() {
             elif [[ $TARGET = *poppler* ]]; then
                 $FUZZER/build_drivers/$DRIVER/$p-distance.sh $p
             elif [[ $TARGET = *openssl* ]]; then
-                #$FUZZER/build_drivers/$DRIVER/$p-distance.sh $p
+                $FUZZER/build_drivers/$DRIVER/$p-distance.sh $p
                 continue
             elif [[ $TARGET = *php* ]]; then
                 $FUZZER/build_drivers/$DRIVER/$p-distance.sh $p

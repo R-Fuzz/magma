@@ -58,7 +58,8 @@ ARG fuzzer_name
 ARG fuzzer_path=fuzzers/${fuzzer_name}
 ENV FUZZER 	${MAGMA_R}/${fuzzer_path}
 USER root:root
-RUN mkdir -p ${FUZZER} && chown magma:magma ${FUZZER}
+COPY --chown=magma:magma ${magma_root}/${fuzzer_path} ${FUZZER}
+RUN chown -R magma:magma ${FUZZER}
 
 # Install fuzzer dependencies
 COPY --chown=magma:magma ${magma_root}/${fuzzer_path}/preinstall.sh ${FUZZER}

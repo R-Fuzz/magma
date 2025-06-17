@@ -5,4 +5,4 @@ apt-get update && \
   libflac-dev libogg-dev libtool libvorbis-dev libopus-dev libmp3lame-dev \
   libmpg123-dev pkg-config python3
 
-ln -s /usr/bin/python3 /usr/bin/python
+ln -sf /usr/bin/python3 /usr/bin/python
