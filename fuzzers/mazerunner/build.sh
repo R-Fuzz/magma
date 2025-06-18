@@ -6,74 +6,149 @@ set -e
 # - env FUZZER: path to fuzzer work dir
 ##
 
-if [ ! -d "$FUZZER/afl" ] || [ ! -d "$FUZZER/symsan" ]; then
+export LLVM_VERSION=12
+
+if [ ! -d "$FUZZER/aflpp" ] || [ ! -d "$FUZZER/aflgo" ] || [ ! -d "$FUZZER/symsan" ]; then
     echo "fetch.sh must be executed first."
     exit 1
 fi
 
-# build AFL
+# build AFL++
 (
-    cd "$FUZZER/afl"
-    CC=clang-12 make -j $(nproc)
-    CC=clang-12 make -j $(nproc) -C llvm_mode
+    cd "$FUZZER/aflpp"
+    CC=clang-${LLVM_VERSION} CXX=clang++-${LLVM_VERSION} make PERFORMANCE=1 LLVM_CONFIG=llvm-config-${LLVM_VERSION} \
+        NO_NYX=1 source-only -j$(nproc)
 )
 
-# build Z3
-# (
-#    cd "$FUZZER/z3"
-#    mkdir -p build install cmake_conf
-#    cd build
-#    CXX=clang++ CC=clang cmake ../ \
-#        -DCMAKE_INSTALL_PREFIX="$FUZZER/z3/install" \
-#        -DCMAKE_INSTALL_Z3_CMAKE_PACKAGE_DIR="$FUZZER/z3/cmake_conf"
-#    make -j $(nproc)
-#    make install
-#    export PATH="$FUZZER/z3/install/bin:$PATH"
-# )
+# build AFLGo
+(
+    cd "$FUZZER/aflgo"
+
+    pushd afl-2.57b
+    make clean all
+    popd
+
+    pushd  instrument
+    make clean all
+    popd
+
+    pushd  distance/distance_calculator
+    cmake ./
+    cmake --build ./
+    popd
+)
 
 # build SymSan
 (
     cd "$FUZZER/symsan"
-    CC=clang-12 CXX=clang++-12 cmake -DCMAKE_INSTALL_PREFIX=. \
-    ./ && make -j && make install
-    pip install -r $FUZZER/symsan/mazerunner/requirements.txt
+    git pull
+    mkdir build && cd build
+    CC=clang-${LLVM_VERSION} CXX=clang++-${LLVM_VERSION} cmake -DAFLPP_PATH=$FUZZER/aflpp \
+        -DCMAKE_INSTALL_PREFIX=. ../
+    make -j$(nproc)
+    export KO_CC=clang-${LLVM_VERSION}
+    export KO_CXX=clang++-${LLVM_VERSION}
+    make install
+    # rebuild libc++
+    cd ../libcxx
+    ./rebuild.sh ../build/bin/ko-clang
+    # install new libc++
+    cd ../build/
+    make install
 )
 
 # build static analyzer
 (
-    cd "$FUZZER/kernel-analyzer" && make -j
+    cd "$FUZZER/kernel-analyzer"
+    git pull
+    make LLVM_BUILD=/usr/lib/llvm-${LLVM_VERSION}/ -j$(nproc)
 )
 
-# build symsan instrumented zlib
+# build symsan instrumented libs
+_comment() {(
+    cd "$FUZZER"
+    export KO_CXX=clang++-${LLVM_VERSION}
+    export KO_CC=clang-${LLVM_VERSION}
+    export CXX=$FUZZER/symsan/build/bin/ko-clang++
+    export CC=$FUZZER/symsan/build/bin/ko-clang
+    export KO_NO_NATIVE_ZLIB=1
+
+    #zlib
+    wget https://github.com/madler/zlib/archive/refs/tags/v1.2.13.tar.gz
+    tar zxf v1.2.13.tar.gz
+    pushd zlib-1.2.13
+    ./configure --static --prefix=$FUZZER/zlib-1.2.13/zlib-1.2.13
+    make -j$(nproc) all
+    popd
+
+    #readline
+    wget https://ftp.gnu.org/gnu/readline/readline-8.1.2.tar.gz
+    tar zxf readline-8.1.2.tar.gz
+    pushd readline-8.1.2
+    ./configure --disable-shared
+    make -j$(nproc)
+    popd
+
+    #termcap
+    wget https://ftp.gnu.org/gnu/termcap/termcap-1.3.1.tar.gz
+    tar zxf termcap-1.3.1.tar.gz
+    pushd termcap-1.3.1
+    ./configure --disable-shared
+    make -j$(nproc)
+    popd
+)}
+
+# build libs in llvm bitcode for lto
 (
     cd "$FUZZER"
+    export CC=clang-${LLVM_VERSION}
+    export AR=llvm-ar-${LLVM_VERSION}
+    export RANLIB=llvm-ranlib-${LLVM_VERSION}
+    export CFLAGS="-O0 -g -flto"
+    export LDFLAGS="-fuse-ld=lld-${LLVM_VERSION}"
+    unset LIBS
+
+    #zlib
     wget https://github.com/madler/zlib/archive/refs/tags/v1.2.13.tar.gz
-    tar -xzf v1.2.13.tar.gz
-    cd zlib-1.2.13
-    export KO_CXX=clang++-12
-    export KO_CC=clang-12
-    export CXX="$FUZZER/symsan/build/bin/ko-clang++"
-    export CC="$FUZZER/symsan/build/bin/ko-clang"
-    export KO_USE_FASTGEN=
-    export KO_NO_NATIVE_ZLIB=1
-    ./configure --static --prefix=$FUZZER/zlib-1.2.13/zlib-1.2.13
-    make -j $(nproc) all
+    tar zxf v1.2.13.tar.gz
+    pushd zlib-1.2.13
+    ./configure --static
+    make -j$(nproc) all
+    popd
+
+    #termcap
+    wget https://ftp.gnu.org/gnu/termcap/termcap-1.3.1.tar.gz
+    tar zxf termcap-1.3.1.tar.gz
+    pushd termcap-1.3.1
+    ./configure --disable-shared
+    # patch Makefile
+    sed -i 's/AR = ar/AR = llvm-ar-${LLVM_VERSION}/' Makefile
+    sed -i 's/CFLAGS = -g/CFLAGS = -O0 -g -flto/' Makefile
+    make -j$(nproc)
+    popd
+
+    #readline
+    wget https://ftp.gnu.org/gnu/readline/readline-8.1.2.tar.gz
+    tar zxf readline-8.1.2.tar.gz
+    pushd readline-8.1.2
+    ./configure --disable-shared
+    make -j$(nproc)
+    popd
 )
 
 # prepare output dirs
-mkdir -p "$OUT/afl" "$OUT/aflgo" "$OUT/clang_bc" "$OUT/symsan"
+mkdir -p "$OUT/afl" "$OUT/aflgo" "${OUT}/clang_bc" "$OUT/symsan"
 
-# compile afl_driver
-"$FUZZER/afl/afl-clang-fast++" $CXXFLAGS -std=c++14 -c -fPIC \
-    "$FUZZER/afl/afl_driver.cpp" -o "$OUT/afl/afl_driver.o"
+# compile fuzz driver for aflgo
+cd "$FUZZER/aflgo"
+$FUZZER/aflgo/instrument/aflgo-clang++ $CXXFLAGS -std=c++11 -c "afl_driver.cpp" -fPIC -o "$OUT/afl_driver.o"
 
-export KO_CC=clang-12
-export KO_CXX=clang++-12
-export CC="$FUZZER/symsan/bin/ko-clang" 
-export CXX="$FUZZER/symsan/bin/ko-clang++" 
+# compile fuzz driver for symsan
+(
+export KO_CC=clang-${LLVM_VERSION}
+export KO_CXX=clang++-${LLVM_VERSION}
 unset KO_ADD_AFLGO
-# $CXX $CXXFLAGS -std=c++14 -c -fPIC \
-#     "$FUZZER/afl/afl_driver.cpp" -o "$OUT/symsan/afl_driver.o"
 
-# compile libfuzzer-harness-fast
-KO_DONT_OPTIMIZE=1 $CC -c $FUZZER/libfuzz-harness-proxy.c -o $OUT/symsan/libfuzzer-harness-fast.o
+KO_DONT_OPTIMIZE=1 $FUZZER/symsan/build/bin/ko-clang $CFLAGS -c -fPIC \
+    -o $OUT/symsan/libfuzzer-harness-fast.o $FUZZER/symsan/driver/harness-proxy.c 
+)

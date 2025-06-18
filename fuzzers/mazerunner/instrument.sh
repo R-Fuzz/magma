@@ -10,83 +10,162 @@ set -xe
 # - env CFLAGS and CXXFLAGS must be set to link against Magma instrumentation
 ##
 
+
+blacklist=("PNG002" "XML005" "XML007" "XML013" "XML014" "XML015")
+
+export LLVM_VERSION=12
+
+TARGET_NAME="$(basename $TARGET)"
+IR_DIR="${OUT}/clang_bc/${TARGET_NAME}"
+mkdir -p "$IR_DIR"
+
 # build bitcode files
-(
-    export CXX=clang++-12
-    export CC=clang-12
+build_bitcode() {(
+    export CXX=clang++-${LLVM_VERSION}
+    export CC=clang-${LLVM_VERSION}
+    export AR=llvm-ar-${LLVM_VERSION}
+    export RANLIB=llvm-ranlib-${LLVM_VERSION}
 
-    export OUT="$OUT/clang_bc"
-    export LDFLAGS="$LDFLAGS -L$OUT -g"
+    export OUT="$IR_DIR"
+    export LDFLAGS="$LDFLAGS -g -L$OUT -stdlib=libc++ -fuse-ld=lld-${LLVM_VERSION} -Wl,-plugin-opt=save-temps"
+    export FUZZER_LIB="$OUT/libfuzzer-harness-fast.a"
+    $CC $CFLAGS -c -fPIC -o $OUT/harness-proxy.o $FUZZER/symsan/driver/harness-proxy.c
+    $AR rcu $FUZZER_LIB $OUT/harness-proxy.o
 
-    "$MAGMA/build.sh"
+    export CFLAGS="$CFLAGS -O0 -g -flto"
+    export CXXFLAGS="$CXXFLAGS -O0 -g -flto -stdlib=libc++"
 
-    cp -r $TARGET/repo $TARGET/repo_bc
-
-    $CC $CFLAGS -DMAGMA_FATAL_CANARIES -emit-llvm -c -D"MAGMA_STORAGE=\"$MAGMA_STORAGE\"" -c "$MAGMA/src/canary.c" \
-    -fPIC -I "$MAGMA/src/" -o "$OUT/canary.o" $LDFLAGS
-
-    export CXXFLAGS="$CXXFLAGS -O0 -g -flto -fuse-ld=lld-12 -Wl,-plugin-opt=save-temps"
-    export CFLAGS="$CFLAGS -O0 -g -flto -fuse-ld=lld-12 -Wl,-plugin-opt=save-temps"
-    export FUZZER_LIB="-l:libfuzzer-harness-fast.o -lstdc++"
-    
-    "$TARGET/build_bc.sh"
-)
-
-blacklist=("XML005" "XML007" "XML013" "XML014" "XML015")
-find "$TARGET/patches/bugs" -name "*.patch" | \
-while read patch; do
-    echo "Preparing env for $patch"
-    NAME=${patch##*/}
-    BUG_ID=${NAME%.patch}
-
-    if [[ " ${blacklist[@]} " =~ " ${BUG_ID} " ]]; then
-        echo "Skipping blacklisted BUG_ID: $BUG_ID"
-        continue
+    DYNAMIC_TARGETS=(poppler)
+    if [[ ! " ${DYNAMIC_TARGETS[@]} " =~ " $TARGET_NAME " ]]; then
+        export LIBS="$LIBS $FUZZER_LIB"
     fi
 
-    # static analysis
-    (
-        $FUZZER/kernel-analyzer/build/lib/KAMain \
-        --entry-list=${TARGET}/BBEntry.txt \
-        --target-list=${TARGET}/BBtargets/${BUG_ID}/BBtargets.txt \
-        --dump-policy=${TARGET}/BBtargets/${BUG_ID}/policy_reach.txt \
-        --dump-distance=${TARGET}/BBtargets/${BUG_ID}/distance_reach.cfg.txt \
-        --dump-bid-mapping=${TARGET}/BBtargets/${BUG_ID}/bid_loc_mapping.txt \
-        --dump-func-info=${TARGET}/BBtargets/${BUG_ID}/function_info.txt \
-        @${TARGET}/bcfiles.txt
+    ZLIB_TARGETS=(libpng libtiff)
+    if [[ " ${ZLIB_TARGETS[@]} " =~ " $TARGET_NAME " ]]; then
+        cp $FUZZER/zlib-1.2.13/libz.a $OUT
+        export LIBS="$LIBS $OUT/libz.a"
+    fi
 
-        #$FUZZER/kernel-analyzer/build/lib/KAMain \
-        #--entry-list=${MAGMA}/BBEntry.txt \
-        #--target-list=${MAGMA}/BBtargets.txt \
-        #--dump-policy=${TARGET}/BBtargets/${BUG_ID}/policy_trigger.txt \
-        #--dump-distance=${TARGET}/BBtargets/${BUG_ID}/distance_trigger.cfg.txt \
-        #"$OUT/clang_bc/canary.o"
+    if [ "lua" = ${TARGET_NAME} ]; then
+        #readline
+        cp $FUZZER/readline-8.1.2/libreadline.a $OUT
+        cp $FUZZER/termcap-1.3.1/libtermcap.a $OUT
+        export LIBS="$LIBS $OUT/libtermcap.a $OUT/libreadline.a"
+    fi
 
-        #python3 $FUZZER/merge_distance_policy.py ${TARGET}/BBtargets/${BUG_ID}
-        mv ${TARGET}/BBtargets/${BUG_ID}/distance_reach.cfg.txt ${TARGET}/BBtargets/${BUG_ID}/distance.cfg.txt
-        mv ${TARGET}/BBtargets/${BUG_ID}/policy_reach.txt ${TARGET}/BBtargets/${BUG_ID}/policy.txt
-    )
+    "$MAGMA/build.sh"
+    "$TARGET/build.sh"
+)}
 
-    # build with AFLGo instrumented version
-    (
-        export CC="$FUZZER/aflgo/instrument/afl-clang-fast"
-        export CXX="$FUZZER/aflgo/instrument/afl-clang-fast++"
-        # Set aflgo-instrumentation flags
-        export CFLAGS="$CFLAGS -O0 -g -distance=${TARGET}/BBtargets/${BUG_ID}/distance.cfg.txt"
-        export CXXFLAGS="$CXXFLAGS -O0 -g -distance=${TARGET}/BBtargets/${BUG_ID}/distance.cfg.txt"
+# static analysis
+static_analyze() {
+    echo "LLVMFuzzerTestOneInput" > ${IR_DIR}/BBEntry.txt
 
-        export BUG_DIR="$OUT/aflgo/${BUG_ID}"
-        export FUZZER_LIB="-l:afl_driver.o -lstdc++"
-        export LDFLAGS="$LDFLAGS -L${OUT}/aflgo -L${BUG_DIR} -g"
-        export OUT=$BUG_DIR
+    find "$TARGET/patches/bugs" -name "*.patch" | \
+    while read patch; do
+        echo "Preparing env for $patch"
+        NAME=${patch##*/}
+        BUG_ID=${NAME%.patch}
 
-        mkdir -p $OUT
-        "$MAGMA/build.sh"
-        "$TARGET/build.sh"
-    )
+        if [[ " ${blacklist[@]} " =~ " ${BUG_ID} " ]]; then
+            echo "Skipping blacklisted BUG_ID: $BUG_ID"
+            continue
+        fi
 
-    # build with SymSan instrumented version
-    (
+        SRC_DIR=$TARGET/repo/
+        if [ "sqlite3" = $TARGET_NAME ]; then
+            SRC_DIR=$TARGET/work/
+        fi
+
+        (
+            OUT="${TARGET}/BBtargets/${BUG_ID}"
+            mkdir -p $OUT
+            grep "MAGMA_LOG(\"${BUG_ID}" "$SRC_DIR" -nR | \
+                awk -F: '{print $1":"$2}' | sed 's/.*\///' \
+                > $OUT/BBtargets.txt
+
+            BCS=$(find ${IR_DIR} -name "*.0.0.preopt.bc")
+            for BC in $BCS; do
+                PROGRAM="$(basename ${BC%%.0*})"
+                PREFIX="${BUG_ID}_${PROGRAM}"
+                $FUZZER/kernel-analyzer/build/lib/KAMain \
+                    --entry-list=${IR_DIR}/BBEntry.txt \
+                    --target-list=$OUT/BBtargets.txt \
+                    --dump-policy=$OUT/policy_reach.txt \
+                    --dump-distance=$OUT/distance_reach.cfg.txt \
+                    --dump-bid-mapping=$OUT/bid_loc_mapping.txt \
+                    --dump-func-info=$OUT/function_info.txt \
+                    --type-based-callgraph=1 \
+                    --verbose=2 \
+                    "${BC}" 2> ${IR_DIR}/${PREFIX}.log
+
+            mv $OUT/distance_reach.cfg.txt $OUT/distance.cfg.txt
+            mv $OUT/policy_reach.txt $OUT/policy.txt
+            done
+        )
+    done
+}
+
+# build with AFLGo instrumented version
+build_aflgo() {
+    find "$TARGET/patches/bugs" -name "*.patch" | while read -r patch; do
+        echo "Preparing env for $patch"
+        NAME=$(basename "$patch")
+        BUG_ID="${NAME%.patch}"
+
+        if [[ " ${blacklist[*]} " =~ " ${BUG_ID} " ]]; then
+            echo "Skipping blacklisted BUG_ID: $BUG_ID"
+            continue
+        fi
+
+        (
+            export CC="$FUZZER/aflgo/instrument/afl-clang-fast"
+            export CXX="$FUZZER/aflgo/instrument/afl-clang-fast++"
+
+            DISTANCE_FILE="${TARGET}/BBtargets/${BUG_ID}/distance.cfg.txt"
+            if [[ ! -f "$DISTANCE_FILE" ]]; then
+                echo "Warning: distance file not found for $BUG_ID"
+                exit 1
+            fi
+
+            export CFLAGS="-O0 -g -distance=$DISTANCE_FILE"
+            export CXXFLAGS="-O0 -g -distance=$DISTANCE_FILE"
+
+            export BUG_DIR="$OUT/aflgo/${BUG_ID}"
+            export FUZZER_LIB="-l:afl_driver.o -lstdc++"
+            export LDFLAGS="-L${OUT}/aflgo -L${BUG_DIR} -g"
+            export OUT="$BUG_DIR"
+
+            mkdir -p "$OUT"
+
+            echo "Building MAGMA for $BUG_ID..."
+            if ! "$MAGMA/build.sh"; then
+                echo "MAGMA build failed for $BUG_ID"
+                exit 1
+            fi
+
+            echo "Building TARGET for $BUG_ID..."
+            if ! "$TARGET/build.sh"; then
+                echo "TARGET build failed for $BUG_ID"
+                exit 1
+            fi
+        )
+    done
+}
+
+# build with MazeRunner instrumented version
+build_mr() {
+    find "$TARGET/patches/bugs" -name "*.patch" | \
+    while read patch; do
+        echo "Preparing env for $patch"
+        NAME=${patch##*/}
+        BUG_ID=${NAME%.patch}
+
+        if [[ " ${blacklist[@]} " =~ " ${BUG_ID} " ]]; then
+            echo "Skipping blacklisted BUG_ID: $BUG_ID"
+            continue
+        fi
+        (
         export KO_CXX=clang++-12
         export KO_CC=clang-12
         export CXX="$FUZZER/symsan/build/bin/ko-clang++"
@@ -99,12 +178,80 @@ while read patch; do
         unset AFLGO_PREPROCESSING
 
         export LDFLAGS="$LDFLAGS -L$OUT/symsan"
-        export FUZZER_LIB="-l:libfuzzer-harness-fast.o -lstdc++"
+        export FUZZER_LIB="$OUT/libfuzzer-harness-fast.o"
         export OUT="$OUT/symsan/${BUG_ID}"
         export LDFLAGS="$LDFLAGS -L$OUT"
+        
+        $CC $CFLAGS -c -fPIC -o $FUZZER_LIB $FUZZER/symsan/driver/harness-proxy.c
+
+        ZLIB_TARGETS=(libpng libtiff)
+        if [[ " ${ZLIB_TARGETS[@]} " =~ " $TARGET_NAME " ]]; then
+            export KO_NO_NATIVE_ZLIB=1
+        else
+            unset KO_NO_NATIVE_ZLIB
+        fi
 
         mkdir -p $OUT
         "$MAGMA/build.sh"
-        "$TARGET/build_zlib.sh"
+
+        OBJ_PATH="$FUZZER/symsan/build/lib/symsan"
+        OPTFLAGS="-taint-abilist=${OBJ_PATH}/dfsan_abilist.txt"
+        if [[ -z "$KO_NO_NATIVE_ZLIB" ]]; then
+            OPTFLAGS="$OPTFLAGS -taint-abilist=${OBJ_PATH}/zlib_abilist.txt"
+        fi
+        if [[ "$KO_SOLVE_UB" = 1 ]]; then
+            OPTFLAGS="$OPTFLAGS -taint-solve-ub=true"
+        fi
+
+        if [ "php" = $TARGET_NAME ]; then
+            OPTFLAGS="$OPTFLAGS -taint-abilist=${FUZZER}/src/icu.txt"
+            OPTFLAGS="$OPTFLAGS -taint-abilist=${FUZZER}/src/php.txt"
+            LIBS="$LIBS $TARGET/repo/Zend/asm/make_x86_64_sysv_elf_gas.o"
+            LIBS="$LIBS $TARGET/repo/Zend/asm/jump_x86_64_sysv_elf_gas.o"
+            LIBS="$LIBS -licuio -licui18n -licuuc -licudata"
+        elif [ "poppler" = $TARGET_NAME ]; then
+            OPTFLAGS="$OPTFLAGS -taint-abilist=${FUZZER}/src/poppler.txt"
+            CXXFLAGS="$CXXFLAGS -fuse-ld=lld-${LLVM_VERSION}"
+            LIBS="$LIBS -lbrotlidec -ljpeg -lz -lopenjp2 -lpng -ltiff -llcms2 -lm -lpthread -pthread"
+        fi
+
+        pushd $OUT
+        ORIG_LIBS="$LIBS" # make a backup
+        BCS=$(find ${IR_DIR} -name "*.0.0.preopt.bc")
+        for BC in $BCS; do
+            PROGRAM="$(basename ${BC%%.0*})"
+            IBC="${PROGRAM}.taint.bc"
+            IOBJ="${PROGRAM}.taint.o"
+
+            if [[ -f ${BC}_distance.bc ]]; then
+                BC=${BC}_distance.bc
+            fi
+            # instrument symsan taint pass and distance pass
+            opt-${LLVM_VERSION} \
+                -load "${OBJ_PATH}/TaintPass.so" \
+                -load-pass-plugin="${OBJ_PATH}/TaintPass.so" \
+                -load-pass-plugin="${OBJ_PATH}/libAFLGOPass.so" \
+                -passes=taint,aflgo \
+                -mllvm -outdir=${AFLGO_TARGET_DIR} \
+                -mllvm -distance=${AFLGO_TARGET_DIR}/distance.cfg.txt \
+                $OPTFLAGS -o $IBC $BC
+            # compile to object file
+            llc-${LLVM_VERSION} -filetype=obj --relocation-model=pic -o $IOBJ $IBC
+            # link with fuzzer harness and produce final binary
+            with_main=$(llvm-nm-${LLVM_VERSION} $BC | grep -c -- " main$") || true
+            if [[ $with_main -eq 0 ]]; then
+                LIBS="$ORIG_LIBS $FUZZER_LIB"
+            else
+                LIBS="$ORIG_LIBS"
+            fi
+            $CXX $CXXFLAGS $IOBJ $LDFLAGS $LIBS -o ${PROGRAM}.taint
+        done
+        popd
     )
-done
+    done
+}
+
+build_bitcode
+static_analyze
+build_aflgo
+build_mr

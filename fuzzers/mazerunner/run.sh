@@ -12,16 +12,24 @@
 # - env BUGID: ID of the bug under $PROGRAM
 ##
 
+if nm "$OUT/afl/$PROGRAM" | grep -E '^[0-9a-f]+\s+[Ww]\s+main$'; then
+    ARGS="@@"
+fi
+
 mkdir -p "$SHARED/findings"
-ulimit -c 0
 
 (
-    export AFL_HANG_TMOUT=100
+    ulimit -c unlimited
+
     export AFL_SKIP_CPUFREQ=1
     export AFL_NO_AFFINITY=1
-    export AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES=1
-    export ASAN_OPTIONS="abort_on_error=1:symbolize=0"
     export AFL_NO_UI=1
+    export AFL_MAP_SIZE=256000
+    export AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES=1
+    export AFL_IGNORE_UNKNOWN_ENVS=1
+    export AFL_FAST_CAL=1
+    export AFL_NO_WARN_INSTABILITY=1
+    export AFL_BENIGN_PROGRAM_ABNORMAL_EXIT=1
 
     nohup timeout "$TIMEOUT" \
         "$FUZZER/aflgo/afl-2.57b/afl-fuzz" \
@@ -33,6 +41,7 @@ ulimit -c 0
 )
 sleep 2s
 (
+    ulimit -c 0
     nohup timeout "$TIMEOUT" \
         python3 -u "$FUZZER/symsan/mazerunner/mazerunner.py" \
         -monitor_resource -a hybrid -n mazerunner \
