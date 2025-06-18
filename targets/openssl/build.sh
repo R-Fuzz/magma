@@ -13,7 +13,6 @@ if [ ! -d "$TARGET/repo" ]; then
     exit 1
 fi
 
-# build the libpng library
 cd "$TARGET/repo"
 
 CONFIGURE_FLAGS=""

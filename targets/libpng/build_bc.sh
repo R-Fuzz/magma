@@ -13,7 +13,7 @@ if [ ! -d "$TARGET/repo" ]; then
     exit 1
 fi
 
-# build the libpng library
+
 cd "$TARGET/repo_bc"
 autoreconf -f -i
 ./configure --enable-hardware-optimizations=off --disable-shared LDFLAGS="$LDFLAGS" CFLAGS="$CFLAGS"

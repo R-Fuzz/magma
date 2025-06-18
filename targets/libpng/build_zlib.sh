@@ -15,7 +15,7 @@ fi
 
 export LIBS="$LIBS $FUZZER/zlib-1.2.13/zlib-build/lib/libz.a"
 unset $KO_NO_NATIVE_ZLIB
-# build the libpng library
+
 cd "$TARGET/repo"
 autoreconf -f -i
 ./configure \

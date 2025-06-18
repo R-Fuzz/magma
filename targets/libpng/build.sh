@@ -13,7 +13,7 @@ if [ ! -d "$TARGET/repo" ]; then
     exit 1
 fi
 
-# build the libpng library
+
 cd "$TARGET/repo"
 autoreconf -f -i
 ./configure --with-libpng-prefix=MAGMA_ --disable-shared LDFLAGS="$LDFLAGS" CFLAGS="$CFLAGS"
