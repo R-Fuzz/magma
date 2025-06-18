@@ -16,6 +16,14 @@ export ADDITIONAL="-targets=$TMP_DIR/BBtargets.txt -outdir=$TMP_DIR -flto -fuse-
 export CFLAGS="$CFLAGS $ADDITIONAL"
 export CXXFLAGS="$CXXFLAGS $ADDITIONAL"
 
+if [ ! -d "$TARGET/repo" ]; then
+    echo "fetch.sh must be executed first."
+    exit 1
+fi
+
+git config --global --add safe.directory /magma/targets/poppler/freetype2
+git config --global --add safe.directory /magma/targets/poppler/repo
+
 export WORK="$TARGET/work"
 rm -rf "$WORK"
 mkdir -p "$WORK"
@@ -36,6 +44,7 @@ EXTRA=""
 test -n "$AR" && EXTRA="$EXTRA -DCMAKE_AR=$AR"
 test -n "$RANLIB" && EXTRA="$EXTRA -DCMAKE_RANLIB=$RANLIB"
 
+export LDFLAGS="$LDFLAGS -lbrotlidec"
 cmake "$TARGET/repo" \
   $EXTRA \
   -DCMAKE_BUILD_TYPE=debug \
@@ -71,7 +80,7 @@ cp $WORK/poppler/utils/pdftoppm.*.bc $OUT
 $CXX $CXXFLAGS -std=c++11 -I"$WORK/poppler/cpp" -I"$TARGET/repo/cpp" \
     "$TARGET/src/pdf_fuzzer.cc" -o "$OUT/pdf_fuzzer" \
     "$WORK/poppler/cpp/libpoppler-cpp.a" "$WORK/poppler/libpoppler.a" \
-    "$WORK/lib/libfreetype.a" $LDFLAGS $LIBS -ljpeg -lz \
+    "$WORK/lib/libfreetype.a" $LDFLAGS $LIBS $FUZZER_LIB -ljpeg -lz \
     -lopenjp2 -lpng -ltiff -llcms2 -lm -lpthread -pthread
 
 
