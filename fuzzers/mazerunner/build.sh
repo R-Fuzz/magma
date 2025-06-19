@@ -6,18 +6,24 @@ set -e
 # - env FUZZER: path to fuzzer work dir
 ##
 
-export LLVM_VERSION=12
-
 if [ ! -d "$FUZZER/aflpp" ] || [ ! -d "$FUZZER/aflgo" ] || [ ! -d "$FUZZER/symsan" ]; then
     echo "fetch.sh must be executed first."
     exit 1
 fi
 
+export CXX="clang++-${LLVM_VERSION}"
+export CC="clang-${LLVM_VERSION}"
+export LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
+
 # build AFL++
 (
+    export LLVM_VERSION=14
+    export CXX="clang++-${LLVM_VERSION}"
+    export CC="clang-${LLVM_VERSION}"
+    export LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
+
     cd "$FUZZER/aflpp"
-    CC=clang-${LLVM_VERSION} CXX=clang++-${LLVM_VERSION} make PERFORMANCE=1 LLVM_CONFIG=llvm-config-${LLVM_VERSION} \
-        NO_NYX=1 source-only -j$(nproc)
+    make PERFORMANCE=1 NO_NYX=1 source-only -j$(nproc)
 )
 
 # build AFLGo
@@ -28,11 +34,11 @@ fi
     make clean all
     popd
 
-    pushd  instrument
+    pushd instrument
     make clean all
     popd
 
-    pushd  distance/distance_calculator
+    pushd distance/distance_calculator
     cmake ./
     cmake --build ./
     popd
@@ -42,26 +48,45 @@ fi
 (
     cd "$FUZZER/symsan"
     git pull
+    git checkout main
+    mkdir build_solver && cd build_solver
+    cmake -DCMAKE_INSTALL_PREFIX=. ../
+    make -j$(nproc) && make install
+    mkdir -p /home/.local/lib/python3.10/site-packages
+    cp python/symsan.cpython-310-x86_64-linux-gnu.so /home/.local/lib/python3.10/site-packages/
+
+    cd "$FUZZER/symsan"
+    git checkout -b rl origin/rl
     mkdir build && cd build
-    CC=clang-${LLVM_VERSION} CXX=clang++-${LLVM_VERSION} cmake -DAFLPP_PATH=$FUZZER/aflpp \
-        -DCMAKE_INSTALL_PREFIX=. ../
-    make -j$(nproc)
+    cmake -DCMAKE_INSTALL_PREFIX=. ../
+    make -j$(nproc) && make install
+
+    # rebuild libc++
     export KO_CC=clang-${LLVM_VERSION}
     export KO_CXX=clang++-${LLVM_VERSION}
-    make install
-    # rebuild libc++
     cd ../libcxx
     ./rebuild.sh ../build/bin/ko-clang
     # install new libc++
     cd ../build/
     make install
+
+    # install pip packages
+    pip install -r $FUZZER/symsan/mazerunner/requirements.txt --no-cache-dir
 )
 
 # build static analyzer
 (
+    export LLVM_VERSION=14
+    export CXX="clang++-${LLVM_VERSION}"
+    export CC="clang-${LLVM_VERSION}"
+    export LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
+    alias clang=$CC
+    alias clang++=$CXX
+
     cd "$FUZZER/kernel-analyzer"
     git pull
     make LLVM_BUILD=/usr/lib/llvm-${LLVM_VERSION}/ -j$(nproc)
+
 )
 
 # build symsan instrumented libs

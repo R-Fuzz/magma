@@ -6,18 +6,27 @@ apt-get update && \
     apt-get install -y \
     make cmake libc++-12-dev libc++abi-12-dev \
     python3 python3-pip python3-dev python-is-python3\
-    zlib1g-dev git libprotobuf-dev protobuf-compiler libunwind-dev \
-    build-essential wget lsb-release software-properties-common gnupg2 \
-    curl subversion ninja-build cargo inotify-tools libz3-dev libboost-dev libboost-container-dev
-apt-get install -y libz3-dev libgoogle-perftools-dev
+    zlib1g-dev git wget vim libunwind-dev \
+    build-essential lsb-release software-properties-common \
+    binutils-gold binutils-dev autoconf automake libtool-bin \
+    curl ninja-build libz3-dev \
+    libboost-dev libboost-container-dev libboost-program-options-dev libboost-graph-dev
 
 curl -O https://apt.llvm.org/llvm.sh \
     && chmod +x llvm.sh \
     && ./llvm.sh 14
 
-apt-get update && apt-get install -y clang-12 llvm-12 lld-12
-ln -s /usr/bin/llvm-config-12 /usr/bin/llvm-config
-update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 100 \
-    && update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 100
+if [ ${LLVM_VERSION:-14} != "14" ]; then
+    apt-get update && apt-get install -y clang-${LLVM_VERSION} llvm-${LLVM_VERSION} lld-${LLVM_VERSION}
+    sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${LLVM_VERSION} 100
+    sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-${LLVM_VERSION} 100
+fi
 
-mv $FUZZER/symsan.cpython-310-x86_64-linux-gnu.so /usr/local/lib/python3.10/dist-packages/
+ln -s /usr/bin/llvm-config-${LLVM_VERSION} /usr/bin/llvm-config
+sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-14 50
+sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-14 50
+
+# Install LLVMgold in bfd-plugins
+mkdir -p /usr/lib/bfd-plugins
+cp /usr/lib/llvm-${LLVM_VERSION}/lib/LLVMgold.so /usr/lib/bfd-plugins
+cp /usr/lib/llvm-${LLVM_VERSION}/lib/libLTO.so /usr/lib/bfd-plugins

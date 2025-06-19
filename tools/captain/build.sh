@@ -47,6 +47,7 @@ test "$GROUP_ID" = "0" && GROUP_ID=1000
 test "$USER_ID" = "0" && USER_ID=1000
 set -x
 docker build -t "$IMG_NAME" \
+    --build-arg GITHUB_TOKEN="$GITHUB_TOKEN" \
     --build-arg fuzzer_name="$FUZZER" \
     --build-arg target_name="$TARGET" \
     --build-arg USER_ID=$USER_ID \

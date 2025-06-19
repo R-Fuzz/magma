@@ -53,6 +53,7 @@ COPY --chown=magma:magma ${magma_root}/${magma_path}/prebuild.sh ${MAGMA}
 COPY --chown=magma:magma ${magma_root}/${magma_path}/src ${MAGMA}/src
 RUN ${MAGMA}/prebuild.sh
 
+ENV LLVM_VERSION=12
 ARG fuzzer_name
 ARG fuzzer_path=fuzzers/${fuzzer_name}
 ENV FUZZER=${MAGMA_R}/${fuzzer_path}
@@ -67,6 +68,8 @@ RUN ${FUZZER}/preinstall.sh
 USER magma:magma
 
 # Fetch fuzzer
+ARG GITHUB_TOKEN
+RUN git config --global --add safe.directory '*'
 COPY --chown=magma:magma ${magma_root}/${fuzzer_path}/fetch.sh ${FUZZER}
 COPY --chown=magma:magma ${magma_root}/${fuzzer_path}/src ${FUZZER}/src
 RUN ${FUZZER}/fetch.sh
