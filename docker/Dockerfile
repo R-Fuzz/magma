@@ -132,4 +132,4 @@ COPY --chown=magma:magma ${magma_root}/${fuzzer_path}/runonce.sh ${FUZZER}
 COPY --chown=magma:magma ${magma_root}/${fuzzer_path}/findings.sh ${FUZZER}
 COPY --chown=magma:magma ${magma_root}/${target_path}/corpus ${TARGET}/corpus
 
-ENTRYPOINT ["${MAGMA}/run.sh"]
+ENTRYPOINT ["/magma/magma/run.sh"]
