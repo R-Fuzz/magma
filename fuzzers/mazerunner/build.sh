@@ -20,9 +20,10 @@ build_aflpp() {(
     export CXX="clang++-${LLVM_VERSION}"
     export CC="clang-${LLVM_VERSION}"
     export LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
-
-    cd "$FUZZER/aflpp"
-    make PERFORMANCE=1 NO_NYX=1 source-only -j$(nproc)
+    
+    CC=clang-14 CXX=clang++-14 make LLVM_CONFIG=llvm-config-14 \
+        NO_NYX=1 source-only -j$(nproc)
+    make -C utils/aflpp_driver
 )}
 
 build_aflgo() {(

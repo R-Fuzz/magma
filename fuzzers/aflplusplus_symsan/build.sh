@@ -14,8 +14,11 @@ fi
 # build AFL++
 (
     cd "$FUZZER/aflpp"
-    CC=clang-14 CXX=clang++-14 make PERFORMANCE=1 LLVM_CONFIG=llvm-config-14 \
+    export AFL_NO_X86=1
+    export PYTHON_INCLUDE=/
+    CC=clang-14 CXX=clang++-14 make LLVM_CONFIG=llvm-config-14 \
         NO_NYX=1 source-only -j$(nproc)
+    make -C utils/aflpp_driver
 )
 
 # build SymSan
