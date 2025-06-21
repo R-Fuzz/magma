@@ -60,7 +60,7 @@ cmake "$TARGET/repo" \
   -DFREETYPE_INCLUDE_DIRS="$WORK/include/freetype2" \
   -DFREETYPE_LIBRARY="$WORK/lib/libfreetype.a" \
   -DICONV_LIBRARIES="/usr/lib/x86_64-linux-gnu/libc.so" \
-  -DCMAKE_EXE_LINKER_FLAGS="$LDFLAGS $LIBS -fuse-ld=lld-14"
+  -DCMAKE_EXE_LINKER_FLAGS="$LDFLAGS $LIBS -fuse-ld=lld-${LLVM_VERSION}"
 make -j$(nproc) poppler poppler-cpp pdfimages pdftoppm
 EXTRA=""
 

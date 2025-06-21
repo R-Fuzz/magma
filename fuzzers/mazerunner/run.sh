@@ -10,11 +10,19 @@
 # - env ARGS: extra arguments to pass to the program
 # - env FUZZARGS: extra arguments to pass to the fuzzer
 # - env BUGID: ID of the bug under $PROGRAM
+# - env COMMIT: git commit hash of mazerunner
 ##
 
 if nm "$OUT/afl/$PROGRAM" | grep -E '^[0-9a-f]+\s+[Ww]\s+main$'; then
     ARGS="@@"
 fi
+
+pushd "$FUZZER/symsan"
+if [ -n "$COMMIT" ]; then
+    git pull
+    git checkout "$COMMIT"
+fi
+popd
 
 mkdir -p "$SHARED/findings"
 

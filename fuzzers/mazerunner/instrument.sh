@@ -13,8 +13,6 @@ set -xe
 
 blacklist=("PNG002" "XML005" "XML007" "XML013" "XML014" "XML015")
 
-export LLVM_VERSION=12
-
 TARGET_NAME="$(basename $TARGET)"
 IR_DIR="${OUT}/clang_bc/${TARGET_NAME}"
 mkdir -p "$IR_DIR"
@@ -32,8 +30,8 @@ build_bitcode() {(
     $CC $CFLAGS -c -fPIC -o $OUT/harness-proxy.o $FUZZER/symsan/driver/harness-proxy.c
     $AR rcu $FUZZER_LIB $OUT/harness-proxy.o
 
-    export CFLAGS="$CFLAGS -O0 -g -flto"
-    export CXXFLAGS="$CXXFLAGS -O0 -g -flto -stdlib=libc++"
+    export CFLAGS="$CFLAGS -O0 -g -fPIC -flto"
+    export CXXFLAGS="$CXXFLAGS -O0 -g -fPIC -flto -stdlib=libc++"
 
     DYNAMIC_TARGETS=(poppler)
     if [[ ! " ${DYNAMIC_TARGETS[@]} " =~ " $TARGET_NAME " ]]; then
@@ -106,6 +104,35 @@ static_analyze() {
     done
 }
 
+# Build AFL++ instrumented version
+build_afl() {(
+    export AFL_PATH="$FUZZER/aflpp"
+    export CC="$FUZZER/aflpp/afl-clang-fast"
+    export CXX="$FUZZER/aflpp/afl-clang-fast++"
+
+    # Some targets cannot directly link the libfuzz driver
+    DYNAMIC_TARGETS=(poppler)
+    if [[ ! " ${DYNAMIC_TARGETS[@]} " =~ " $TARGET_NAME " ]]; then
+        export LIBS="$LIBS $FUZZER/aflpp/utils/aflpp_driver/libAFLDriver.a"
+    fi
+    export FUZZER_LIB="$FUZZER/aflpp/utils/aflpp_driver/libAFLDriver.a"
+
+    # Some targets do not support a static AFL memory region
+    DYNAMIC_TARGETS=(php openssl)
+    if [[ " ${DYNAMIC_TARGETS[@]} " =~ " $TARGET_NAME " ]]; then
+        export AFL_LLVM_MAP_DYNAMIC=1
+    fi
+
+    export OUT="$OUT/afl"
+    export LDFLAGS="$LDFLAGS -L$OUT"
+
+    export AFL_LLVM_DICT2FILE="$OUT/afl++.dict"
+    export AFL_LLVM_DICT2FILE_NO_MAIN="1"
+
+    "$MAGMA/build.sh"
+    "$TARGET/build.sh"
+)}
+
 # build with AFLGo instrumented version
 build_aflgo() {
     find "$TARGET/patches/bugs" -name "*.patch" | while read -r patch; do
@@ -132,7 +159,7 @@ build_aflgo() {
             export CXXFLAGS="-O0 -g -distance=$DISTANCE_FILE"
 
             export BUG_DIR="$OUT/aflgo/${BUG_ID}"
-            export FUZZER_LIB="-l:afl_driver.o -lstdc++"
+            export LIBS="$LIBS -l:afl_driver.o -lstdc++"
             export LDFLAGS="-L${OUT}/aflgo -L${BUG_DIR} -g"
             export OUT="$BUG_DIR"
 
@@ -166,8 +193,8 @@ build_mr() {
             continue
         fi
         (
-        export KO_CXX=clang++-12
-        export KO_CC=clang-12
+        export KO_CXX=clang++-${LLVM_VERSION}
+        export KO_CC=clang-${LLVM_VERSION}
         export CXX="$FUZZER/symsan/build/bin/ko-clang++"
         export CC="$FUZZER/symsan/build/bin/ko-clang"
         export KO_DONT_OPTIMIZE=1
@@ -226,17 +253,19 @@ build_mr() {
             if [[ -f ${BC}_distance.bc ]]; then
                 BC=${BC}_distance.bc
             fi
+
             # instrument symsan taint pass and distance pass
             opt-${LLVM_VERSION} \
-                -load "${OBJ_PATH}/TaintPass.so" \
-                -load-pass-plugin="${OBJ_PATH}/TaintPass.so" \
-                -load-pass-plugin="${OBJ_PATH}/libAFLGOPass.so" \
-                -passes=taint,aflgo \
-                -mllvm -outdir=${AFLGO_TARGET_DIR} \
-                -mllvm -distance=${AFLGO_TARGET_DIR}/distance.cfg.txt \
-                $OPTFLAGS -o $IBC $BC
+            -load="${OBJ_PATH}/libTaintPass.so" \
+            -load="${OBJ_PATH}/libAFLGOPass.so" \
+            -enable-new-pm=0 \
+            -distance=${AFLGO_TARGET_DIR}/distance.cfg.txt \
+            -outdir=${AFLGO_TARGET_DIR} \
+            $OPTFLAGS -o $IBC $BC
+
             # compile to object file
             llc-${LLVM_VERSION} -filetype=obj --relocation-model=pic -o $IOBJ $IBC
+
             # link with fuzzer harness and produce final binary
             with_main=$(llvm-nm-${LLVM_VERSION} $BC | grep -c -- " main$") || true
             if [[ $with_main -eq 0 ]]; then
@@ -253,5 +282,6 @@ build_mr() {
 
 build_bitcode
 static_analyze
+# build_afl
 build_aflgo
 build_mr
