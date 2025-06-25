@@ -19,7 +19,8 @@ mkdir -p "$WORK"
 mkdir -p "$WORK/lib" "$WORK/include"
 
 cd "$TARGET/repo"
-./autogen.sh
+(set +e ; ./autogen.sh) || \
+echo "autogen.sh failed to grab config.guess and config.sub from upstream master, continuing anyway"
 ./configure --disable-shared --prefix="$WORK" \
     --disable-lzma --disable-jpeg
 make -j$(nproc) clean
