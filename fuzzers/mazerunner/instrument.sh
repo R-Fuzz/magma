@@ -146,6 +146,8 @@ build_aflgo() {
         fi
 
         (
+            export AFL_CXX=clang++-12
+            export AFL_CC=clang-12
             export CC="$FUZZER/aflgo/instrument/afl-clang-fast"
             export CXX="$FUZZER/aflgo/instrument/afl-clang-fast++"
 
@@ -256,7 +258,7 @@ build_mr() {
 
             # instrument symsan taint pass and distance pass
             opt-${LLVM_VERSION} \
-            -load="${OBJ_PATH}/libTaintPass.so" \
+            -load="${OBJ_PATH}/TaintPass.so" \
             -load="${OBJ_PATH}/libAFLGOPass.so" \
             -enable-new-pm=0 \
             -distance=${AFLGO_TARGET_DIR}/distance.cfg.txt \

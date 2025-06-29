@@ -16,17 +16,16 @@ export CC="clang-${LLVM_VERSION}"
 export LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
 
 build_aflpp() {(
-    export LLVM_VERSION=14
-    export CXX="clang++-${LLVM_VERSION}"
-    export CC="clang-${LLVM_VERSION}"
-    export LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
-    
     CC=clang-14 CXX=clang++-14 make LLVM_CONFIG=llvm-config-14 \
         NO_NYX=1 source-only -j$(nproc)
     make -C utils/aflpp_driver
 )}
 
 build_aflgo() {(
+    export CXX="clang++-12"
+    export CC="clang-12"
+    export LLVM_CONFIG="llvm-config-12"
+
     cd "$FUZZER/aflgo"
 
     pushd afl-2.57b
@@ -43,28 +42,20 @@ build_aflgo() {(
     popd
 )}
 
-build_symsan() {(
+build_mazerunner() {(
     cd "$FUZZER/symsan"
-    git pull
-
-    git checkout main
-    mkdir build_solver && cd build_solver
+    git pull && git checkout main
+    mkdir build && cd build
     cmake -DCMAKE_INSTALL_PREFIX=. ../
     make -j$(nproc) && make install
     mkdir -p /home/.local/lib/python3.10/site-packages
     cp python/symsan.cpython-310-x86_64-linux-gnu.so /home/.local/lib/python3.10/site-packages/
 
-    cd "$FUZZER/symsan"
-    git checkout -b rl origin/rl
-    mkdir build && cd build
-    cmake -DCMAKE_INSTALL_PREFIX=. ../
-    make -j$(nproc) && make install
-
     # rebuild libc++
     export KO_CC=clang-${LLVM_VERSION}
     export KO_CXX=clang++-${LLVM_VERSION}
     cd "$FUZZER/symsan/libcxx"
-    ./rebuild.sh ../build/bin/ko-clang
+    ./rebuild.sh "$FUZZER/symsan/build/bin/ko-clang"
     # install new libc++
     cd "$FUZZER/symsan/build/"
     make install
@@ -74,10 +65,6 @@ build_symsan() {(
 )}
 
 build_static_analyzer() {(
-    export LLVM_VERSION=14
-    export CXX="clang++-${LLVM_VERSION}"
-    export CC="clang-${LLVM_VERSION}"
-    export LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
     alias clang=$CC
     alias clang++=$CXX
 
@@ -159,7 +146,7 @@ build_llvm_bitcode_libs() {(
 
 # build_aflpp
 build_aflgo
-build_symsan
+build_mazerunner
 build_static_analyzer
 # build_symsan_instrumented_libs
 build_llvm_bitcode_libs # For LTO mode
@@ -168,15 +155,9 @@ build_llvm_bitcode_libs # For LTO mode
 mkdir -p "$OUT/afl" "$OUT/aflgo" "${OUT}/clang_bc" "$OUT/symsan"
 
 # compile fuzz driver for aflgo
-cd "$FUZZER/aflgo"
-$FUZZER/aflgo/instrument/aflgo-clang++ $CXXFLAGS -std=c++11 -c "afl_driver.cpp" -fPIC -o "$OUT/aflgo/afl_driver.o"
-
-# compile fuzz driver for symsan
 (
-export KO_CC=clang-${LLVM_VERSION}
-export KO_CXX=clang++-${LLVM_VERSION}
-unset KO_ADD_AFLGO
-
-KO_DONT_OPTIMIZE=1 $FUZZER/symsan/build/bin/ko-clang $CFLAGS -c -fPIC \
-    -o $OUT/symsan/libfuzzer-harness-fast.o $FUZZER/symsan/driver/harness-proxy.c 
+cd "$FUZZER/aflgo"
+export AFL_CXX=clang++-12
+export AFL_CC=clang-12
+$FUZZER/aflgo/instrument/aflgo-clang++ $CXXFLAGS -std=c++11 -c "afl_driver.cpp" -fPIC -o "$OUT/aflgo/afl_driver.o"
 )

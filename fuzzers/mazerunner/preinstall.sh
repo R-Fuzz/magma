@@ -4,9 +4,9 @@ set -e
 apt-get update && \
     apt-get upgrade -y && \
     apt-get install -y \
-    make cmake libc++-12-dev libc++abi-12-dev \
+    make cmake libc++-${LLVM_VERSION}-dev libc++abi-${LLVM_VERSION}-dev \
     python3 python3-pip python3-dev python-is-python3\
-    zlib1g-dev git wget vim libunwind-dev \
+    zlib1g-dev git wget vim libunwind-${LLVM_VERSION}-dev \
     build-essential lsb-release software-properties-common \
     binutils-gold binutils-dev autoconf automake libtool-bin \
     curl ninja-build libz3-dev \
@@ -14,17 +14,16 @@ apt-get update && \
 
 curl -O https://apt.llvm.org/llvm.sh \
     && chmod +x llvm.sh \
-    && ./llvm.sh 14
+    && ./llvm.sh $LLVM_VERSION
 
-if [ ${LLVM_VERSION:-14} != "14" ]; then
-    apt-get update && apt-get install -y clang-${LLVM_VERSION} llvm-${LLVM_VERSION} lld-${LLVM_VERSION}
-    sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${LLVM_VERSION} 100
-    sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-${LLVM_VERSION} 100
-fi
+# For building aflgo
+apt-get install -y clang-12 llvm-12 lld-12
+update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 10
+update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 10
 
 ln -s /usr/bin/llvm-config-${LLVM_VERSION} /usr/bin/llvm-config
-sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-14 50
-sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-14 50
+update-alternatives --install /usr/bin/clang clang /usr/bin/clang-14 20
+update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-14 20
 
 # Install LLVMgold in bfd-plugins
 mkdir -p /usr/lib/bfd-plugins
