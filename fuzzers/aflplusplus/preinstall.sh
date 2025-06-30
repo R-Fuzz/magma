@@ -1,52 +1,47 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-apt-get update && \
-    apt-get install -y \
-        make \
-	build-essential \
-	git \
-	wget \
-	gcc-8-plugin-dev \
-	libstdc++-8-dev \
-	gnupg \
-	lsb-release \
-	software-properties-common
+export DEBIAN_FRONTEND=noninteractive
 
+# Choose your versions here:
+LLVM_VERSION=16
+GCC_VERSION=11
+
+# 1) Add official LLVM apt repo + key
+apt-get update && apt-get install -y --no-install-recommends \
+    build-essential make cmake automake meson ninja-build bison flex \
+    git xz-utils bzip2 nano bash-completion less vim joe ssh psmisc \
+    wget gnupg lsb-release \
+    python3 python3-dev python3-pip python-is-python3 \
+    libtool libtool-bin libglib2.0-dev \
+    gnuplot-nox libpixman-1-dev bc lcov \
+    software-properties-common
 add-apt-repository -y ppa:ubuntu-toolchain-r/test
-
 (
     wget https://apt.llvm.org/llvm.sh
     chmod +x llvm.sh
-    ./llvm.sh 14
+    ./llvm.sh $LLVM_VERSION
     rm -f llvm.sh
 )
 
-update-alternatives \
-  --install /usr/lib/llvm              llvm             /usr/lib/llvm-14  20 \
-  --slave   /usr/bin/llvm-config       llvm-config      /usr/bin/llvm-config-14  \
-  --slave   /usr/bin/llvm-ar           llvm-ar          /usr/bin/llvm-ar-14 \
-  --slave   /usr/bin/llvm-as           llvm-as          /usr/bin/llvm-as-14 \
-  --slave   /usr/bin/llvm-bcanalyzer   llvm-bcanalyzer  /usr/bin/llvm-bcanalyzer-14 \
-  --slave   /usr/bin/llvm-c-test       llvm-c-test      /usr/bin/llvm-c-test-14 \
-  --slave   /usr/bin/llvm-cov          llvm-cov         /usr/bin/llvm-cov-14 \
-  --slave   /usr/bin/llvm-diff         llvm-diff        /usr/bin/llvm-diff-14 \
-  --slave   /usr/bin/llvm-dis          llvm-dis         /usr/bin/llvm-dis-14 \
-  --slave   /usr/bin/llvm-dwarfdump    llvm-dwarfdump   /usr/bin/llvm-dwarfdump-14 \
-  --slave   /usr/bin/llvm-extract      llvm-extract     /usr/bin/llvm-extract-14 \
-  --slave   /usr/bin/llvm-link         llvm-link        /usr/bin/llvm-link-14 \
-  --slave   /usr/bin/llvm-mc           llvm-mc          /usr/bin/llvm-mc-14 \
-  --slave   /usr/bin/llvm-nm           llvm-nm          /usr/bin/llvm-nm-14 \
-  --slave   /usr/bin/llvm-objdump      llvm-objdump     /usr/bin/llvm-objdump-14 \
-  --slave   /usr/bin/llvm-ranlib       llvm-ranlib      /usr/bin/llvm-ranlib-14 \
-  --slave   /usr/bin/llvm-readobj      llvm-readobj     /usr/bin/llvm-readobj-14 \
-  --slave   /usr/bin/llvm-rtdyld       llvm-rtdyld      /usr/bin/llvm-rtdyld-14 \
-  --slave   /usr/bin/llvm-size         llvm-size        /usr/bin/llvm-size-14 \
-  --slave   /usr/bin/llvm-stress       llvm-stress      /usr/bin/llvm-stress-14 \
-  --slave   /usr/bin/llvm-symbolizer   llvm-symbolizer  /usr/bin/llvm-symbolizer-14 \
-  --slave   /usr/bin/llvm-tblgen       llvm-tblgen      /usr/bin/llvm-tblgen-14
+# 2) Update & install core build tools + AFL++ dependencies
+apt-get update && apt-get install -y --no-install-recommends \
+    gcc-${GCC_VERSION} g++-${GCC_VERSION} gcc-${GCC_VERSION}-plugin-dev \
+    clang-${LLVM_VERSION} clang-tools-${LLVM_VERSION} \
+    libc++1-${LLVM_VERSION} libc++-${LLVM_VERSION}-dev \
+    libc++abi1-${LLVM_VERSION} libc++abi-${LLVM_VERSION}-dev \
+    libclang1-${LLVM_VERSION} libclang-${LLVM_VERSION}-dev \
+    libclang-common-${LLVM_VERSION}-dev libclang-rt-${LLVM_VERSION}-dev \
+    libclang-cpp${LLVM_VERSION} libclang-cpp${LLVM_VERSION}-dev \
+    lld-${LLVM_VERSION} llvm-${LLVM_VERSION} llvm-${LLVM_VERSION}-dev \
+    llvm-${LLVM_VERSION}-runtime llvm-${LLVM_VERSION}-tools \
+    libunwind-${LLVM_VERSION} \
+    $([ "$(dpkg --print-architecture)" = "amd64" ] && echo gcc-${GCC_VERSION}-multilib gcc-multilib) \
+    $([ "$(dpkg --print-architecture)" = "arm64" ] && echo libcapstone-dev) && \
+    rm -rf /var/lib/apt/lists/*
 
-update-alternatives \
-  --install /usr/bin/clang                 clang                  /usr/bin/clang-14     20 \
-  --slave   /usr/bin/clang++               clang++                /usr/bin/clang++-14 \
-  --slave   /usr/bin/clang-cpp             clang-cpp              /usr/bin/clang-cpp-14
+# 3) Register gcc & clang with update-alternatives
+update-alternatives --install /usr/bin/gcc  gcc  /usr/bin/gcc-${GCC_VERSION} 100 \
+                    --slave   /usr/bin/g++  g++  /usr/bin/g++-${GCC_VERSION}
+update-alternatives --install /usr/bin/clang  clang  /usr/bin/clang-${LLVM_VERSION} 100 \
+                    --slave   /usr/bin/clang++  clang++  /usr/bin/clang++-${LLVM_VERSION}
