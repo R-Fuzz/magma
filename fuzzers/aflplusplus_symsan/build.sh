@@ -11,13 +11,16 @@ if [ ! -d "$FUZZER/aflpp" ] || [ ! -d "$FUZZER/symsan" ]; then
     exit 1
 fi
 
+export CXX="clang++-${LLVM_VERSION}"
+export CC="clang-${LLVM_VERSION}"
+export LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
+
 # build AFL++
 (
     cd "$FUZZER/aflpp"
     export AFL_NO_X86=1
     export PYTHON_INCLUDE=/
-    CC=clang-14 CXX=clang++-14 make LLVM_CONFIG=llvm-config-14 \
-        NO_NYX=1 source-only -j$(nproc)
+    make NO_NYX=1 source-only -j$(nproc)
     make -C utils/aflpp_driver
 )
 
@@ -26,11 +29,11 @@ fi
     cd "$FUZZER/symsan"
     git pull
     mkdir build && cd build
-    CC=clang-14 CXX=clang++-14 cmake -DAFLPP_PATH=$FUZZER/aflpp \
+    cmake -DAFLPP_PATH=$FUZZER/aflpp \
         -DCMAKE_INSTALL_PREFIX=. ../
     make -j$(nproc)
-    export KO_CC=clang-14
-    export KO_CXX=clang++-14
+    export KO_CC=clang-${LLVM_VERSION}
+    export KO_CXX=clang++-${LLVM_VERSION}
     make install
     # rebuild libc++
     cd ../libcxx
@@ -44,14 +47,14 @@ fi
 (
     cd "$FUZZER/kernel-analyzer"
     git pull
-    make LLVM_BUILD=/usr/lib/llvm-14/ -j$(nproc)
+    make LLVM_BUILD=/usr/lib/llvm-${LLVM_VERSION}/ -j$(nproc)
 )
 
 # build symsan instrumented libs
 _comment() {(
     cd "$FUZZER"
-    export KO_CXX=clang++-14
-    export KO_CC=clang-14
+    export KO_CXX=clang++-${LLVM_VERSION}
+    export KO_CC=clang-${LLVM_VERSION}
     export CXX=$FUZZER/symsan/build/bin/ko-clang++
     export CC=$FUZZER/symsan/build/bin/ko-clang
     export KO_NO_NATIVE_ZLIB=1
@@ -84,11 +87,11 @@ _comment() {(
 # build libs in llvm bitcode for lto
 (
     cd "$FUZZER"
-    export CC=clang-14
-    export AR=llvm-ar-14
-    export RANLIB=llvm-ranlib-14
+    export CC=clang-${LLVM_VERSION}
+    export AR=llvm-ar-${LLVM_VERSION}
+    export RANLIB=llvm-ranlib-${LLVM_VERSION}
     export CFLAGS="-O0 -g -flto"
-    export LDFLAGS="-fuse-ld=lld-14"
+    export LDFLAGS="-fuse-ld=lld-${LLVM_VERSION}"
     unset LIBS
 
     #zlib
@@ -105,7 +108,7 @@ _comment() {(
     pushd termcap-1.3.1
     ./configure --disable-shared
     # patch Makefile
-    sed -i 's/AR = ar/AR = llvm-ar-14/' Makefile
+    sed -i 's/AR = ar/AR = llvm-ar-${LLVM_VERSION}/' Makefile
     sed -i 's/CFLAGS = -g/CFLAGS = -O0 -g -flto/' Makefile
     make -j$(nproc)
     popd
@@ -121,10 +124,3 @@ _comment() {(
 
 # prepare output dirs
 mkdir -p "$OUT/afl" "$OUT/clang_bc" "$OUT/symsan"
-
-export KO_CC=clang-14
-export KO_CXX=clang++-14
-
-# compile libfuzzer-harness-fast
-KO_DONT_OPTIMIZE=1 $FUZZER/symsan/build/bin/ko-clang $CFLAGS -c -fPIC \
-    -o $OUT/symsan/libfuzzer-harness-fast.o $FUZZER/symsan/driver/harness-proxy.c 

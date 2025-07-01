@@ -22,8 +22,8 @@ update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 10
 update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 10
 
 ln -s /usr/bin/llvm-config-${LLVM_VERSION} /usr/bin/llvm-config
-update-alternatives --install /usr/bin/clang clang /usr/bin/clang-14 20
-update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-14 20
+update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${LLVM_VERSION} 20
+update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-${LLVM_VERSION} 20
 
 # Install LLVMgold in bfd-plugins
 mkdir -p /usr/lib/bfd-plugins

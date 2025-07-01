@@ -51,13 +51,13 @@ build_afl() {(
 
 # build bitcode files
 build_bitcode() {(
-    export CXX=clang++-14
-    export CC=clang-14
-    export AR=llvm-ar-14
-    export RANLIB=llvm-ranlib-14
+    export CXX=clang++-${LLVM_VERSION}
+    export CC=clang-${LLVM_VERSION}
+    export AR=llvm-ar-${LLVM_VERSION}
+    export RANLIB=llvm-ranlib-${LLVM_VERSION}
 
     export OUT="$IR_DIR"
-    export LDFLAGS="$LDFLAGS -g -L$OUT -stdlib=libc++ -fuse-ld=lld-14 -Wl,-plugin-opt=save-temps"
+    export LDFLAGS="$LDFLAGS -g -L$OUT -stdlib=libc++ -fuse-ld=lld-${LLVM_VERSION} -Wl,-plugin-opt=save-temps"
     export FUZZER_LIB="$OUT/libfuzzer-harness-fast.a"
     $CC $CFLAGS -c -fPIC -o $OUT/harness-proxy.o $FUZZER/symsan/driver/harness-proxy.c
     $AR rcu $FUZZER_LIB $OUT/harness-proxy.o
@@ -163,8 +163,8 @@ static_analyze() {
 
 # build with SymSan instrumented version
 build_symsan() {(
-    export KO_CXX=clang++-14
-    export KO_CC=clang-14
+    export KO_CXX=clang++-${LLVM_VERSION}
+    export KO_CC=clang-${LLVM_VERSION}
     export CXX=$FUZZER/symsan/build/bin/ko-clang++
     export CC=$FUZZER/symsan/build/bin/ko-clang
     export KO_DONT_OPTIMIZE=1
@@ -200,7 +200,7 @@ build_symsan() {(
         LIBS="$LIBS -licuio -licui18n -licuuc -licudata"
     elif [ "poppler" = $TARGET_NAME ]; then
         OPTFLAGS="$OPTFLAGS -taint-abilist=${FUZZER}/src/poppler.txt"
-        CXXFLAGS="$CXXFLAGS -fuse-ld=lld-14"
+        CXXFLAGS="$CXXFLAGS -fuse-ld=lld-${LLVM_VERSION}"
         LIBS="$LIBS -lbrotlidec -ljpeg -lz -lopenjp2 -lpng -ltiff -llcms2 -lm -lpthread -pthread"
     fi
 
@@ -215,11 +215,11 @@ build_symsan() {(
         if [[ -f ${BC}_distance.bc ]]; then
             BC=${BC}_distance.bc
         fi
-        opt-14 -load "${OBJ_PATH}/TaintPass.so" \
+        opt-${LLVM_VERSION} -load "${OBJ_PATH}/TaintPass.so" \
             -load-pass-plugin="${OBJ_PATH}/TaintPass.so" -passes=taint \
             $OPTFLAGS -o $IBC $BC
-        llc-14 -filetype=obj --relocation-model=pic -o $IOBJ $IBC
-        with_main=$(llvm-nm-14 $BC | grep -c -- " main$") || true
+        llc-${LLVM_VERSION} -filetype=obj --relocation-model=pic -o $IOBJ $IBC
+        with_main=$(llvm-nm-${LLVM_VERSION} $BC | grep -c -- " main$") || true
         if [[ $with_main -eq 0 ]]; then
             LIBS="$ORIG_LIBS $FUZZER_LIB"
         else
