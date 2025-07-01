@@ -1,7 +1,0 @@
-pngrtran.c:1967
-pngrutil.c:992
-pngrutil.c:3189
-pngrutil.c:3480
-pngrutil.c:4645
-pngerror.c:955
-png.c:620
