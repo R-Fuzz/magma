@@ -38,6 +38,7 @@ export AFL_CUSTOM_MUTATOR_LIBRARY="$FUZZER/symsan/build/bin/libSymSanMutator.so"
 export SYMSAN_TARGET="$OUT/symsan/${PROGRAM}.taint"
 export SYMSAN_SOLVE_UB=1
 export SYMSAN_USE_JIGSAW=1
+export SYMSAN_USE_NESTED=1
 #export SYMSAN_SAVE_SOLVED=1
 #export AFL_CUSTOM_MUTATOR_ONLY=1
 

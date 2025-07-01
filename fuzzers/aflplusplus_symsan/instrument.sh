@@ -41,6 +41,10 @@ build_afl() {(
     export AFL_LLVM_DICT2FILE="$OUT/afl++.dict"
     export AFL_LLVM_DICT2FILE_NO_MAIN="1"
 
+    if [[ -f "$IR_DIR/afl_allow.txt" ]]; then
+        export AFL_LLVM_ALLOWLIST="$IR_DIR/afl_allow.txt"
+    fi
+
     "$MAGMA/build.sh"
     "$TARGET/build.sh"
 )}
@@ -146,11 +150,14 @@ static_analyze() {
                 --entry-list=${IR_DIR}/BBEntry.txt \
                 --target-list=${IR_DIR}/BBTargets.txt \
                 --dump-policy=${IR_DIR}/${PREFIX}_policy.txt \
+                --dump-distance=${IR_DIR}/${PREFIX}_distance.txt \
                 --dump-annotated-ir="_distance.bc" \
                 --type-based-callgraph=1 \
                 --verbose=2 \
                 "${BC}" 2> ${IR_DIR}/${PREFIX}.log
         done
+        # generate instrumentation list for afl++
+        cat ${IR_DIR}/*_distance.txt | grep '^fun:'> ${IR_DIR}/afl_allow.txt
     fi
 }
 
@@ -183,9 +190,7 @@ build_symsan() {(
     if [[ -z "$KO_NO_NATIVE_ZLIB" ]]; then
         OPTFLAGS="$OPTFLAGS -taint-abilist=${OBJ_PATH}/zlib_abilist.txt"
     fi
-    if [[ "$KO_SOLVE_UB" = 1 ]]; then
-        OPTFLAGS="$OPTFLAGS -taint-solve-ub=true"
-    fi
+    OPTFLAGS="$OPTFLAGS -taint-solve-ub=true -taint-trace-annotated-bb=true"
 
     if [ "php" = $TARGET_NAME ]; then
         OPTFLAGS="$OPTFLAGS -taint-abilist=${FUZZER}/src/icu.txt"
@@ -224,8 +229,8 @@ build_symsan() {(
     done
 )}
 
-build_afl
 build_bitcode
 static_analyze
 build_symsan
+build_afl
 
