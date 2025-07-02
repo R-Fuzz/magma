@@ -1,0 +1,19 @@
+ARG target_name
+FROM magma/aflgo_mazerunner/${target_name}
+
+## Magma directory hierarchy
+# magma_root is relative to the docker-build's working directory
+# The Docker image must be built in the root of the magma directory
+ARG magma_root=./
+ARG magma_path=magma
+ENV MAGMA=${MAGMA_R}/${magma_path}
+ARG fuzzer_name
+ARG fuzzer_path=fuzzers/${fuzzer_name}
+
+USER magma:magma
+
+COPY --chown=magma:magma ${magma_root}/${fuzzer_path}/build.sh ${FUZZER}
+RUN ${FUZZER}/build.sh
+
+COPY --chown=magma:magma ${magma_root}/${fuzzer_path}/run.sh ${FUZZER}
+COPY --chown=magma:magma ${magma_root}/${fuzzer_path}/runonce.sh ${FUZZER}
