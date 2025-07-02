@@ -13,13 +13,14 @@
 # - env COMMIT: git commit hash of mazerunner
 ##
 
-if nm "$OUT/afl/$PROGRAM" | grep -E '^[0-9a-f]+\s+[Ww]\s+main$'; then
+if nm "$OUT/aflgo/$BUGID/$PROGRAM" | grep -E '^[0-9a-f]+\s+[Ww]\s+main$'; then
     ARGS="@@"
 fi
 
 pushd "$FUZZER/symsan"
 if [ -n "$COMMIT" ]; then
-    git pull
+    git fetch
+    git reset --hard origin/main
     git checkout "$COMMIT"
 fi
 popd
@@ -44,7 +45,7 @@ mkdir -p "$SHARED/findings"
         -S out -l /tmp/mr -m none \
         -i /magma/targets/libpng/corpus/libpng_read_fuzzer \
         -o "$SHARED/findings/aflgo" \
-        $FUZZARGS -- "$OUT/$BUGID/$PROGRAM" $ARGS \
+        $FUZZARGS -- "$OUT/aflgo/$BUGID/$PROGRAM" $ARGS \
         > "$SHARED/findings/aflgo.log" 2>&1 &
 )
 sleep 2s
@@ -58,6 +59,6 @@ sleep 2s
         -m reachability \
         -o "$SHARED/findings" \
         -s "$TARGET/BBtargets" \
-        $FUZZARGS -- "$OUT/$BUGID/$PROGRAM" $ARGS \
+        $FUZZARGS -- "$OUT/symsan/$BUGID/$PROGRAM" $ARGS \
         > "$SHARED/findings/mazerunner.log" 2>&1 &
 )
