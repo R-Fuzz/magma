@@ -250,6 +250,17 @@ for FUZZER in "${FUZZERS[@]}"; do
             echo_time "Docker image $IMG_NAME already exists. Skipping build."
         else
             echo_time "Building $IMG_NAME"
+            # If FUZZER starts with llm, set DOCKERFILE_PATH
+            if [[ "$FUZZER" == llm* ]]; then
+                # Check if magma/aflgo_mazerunner/$TARGET exists
+                if ! docker image inspect "magma/aflgo_mazerunner/${TARGET}" > /dev/null 2>&1; then
+                    echo_time "ERROR: Please build the required image magma/aflgo_mazerunner/${TARGET} first. Skipping $FUZZER/$TARGET."
+                    continue
+                fi
+                export DOCKERFILE_PATH="$MAGMA/fuzzers/$FUZZER/Dockerfile"
+            else
+                unset DOCKERFILE_PATH
+            fi
             if ! "$MAGMA"/tools/captain/build.sh &> \
                 "${LOGDIR}/${FUZZER}_${TARGET}_build.log"; then
                 echo_time "Failed to build $IMG_NAME. Check build log for info."
@@ -268,15 +279,22 @@ for FUZZER in "${FUZZERS[@]}"; do
             if [ -d "$BUG_DIR" ]; then
                 BUGIDS=($(basename -a "$BUG_DIR"/*.patch | sed 's/\.patch$//'))
             fi
-
-            if [ "$FUZZER" == "symsan" ]; then
+            if [[ "$FUZZER" == llm* || "$FUZZER" == *mazerunner ]]; then
                 echo_time "Starting campaigns for $PROGRAM $ARGS with bugs: ${BUGIDS[*]}"
                 for BUGID in "${BUGIDS[@]}"; do
                     export BUGID
                     for ((i=0; i<$REPEAT; i++)); do
                         export NUMWORKERS="$(get_var_or_default $FUZZER 'CAMPAIGN_WORKERS')"
                         export AFFINITY=$(allocate_workers)
-                        start_ex &
+                        if [[ "$RUN_SEQUENTIALLY" == "1" ]]; then
+                            start_ex
+                        else
+                            start_ex &
+                        fi
+                        if [[ "$FUZZER" == *gemini* ]]; then
+                        # bypass gemini's free token limit
+                            sleep 30s
+                        fi
                     done
                 done
             else

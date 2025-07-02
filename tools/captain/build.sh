@@ -45,6 +45,11 @@ GROUP_ID=$(id -g $USER)
 USER_ID=$(id -u $USER)
 test "$GROUP_ID" = "0" && GROUP_ID=1000
 test "$USER_ID" = "0" && USER_ID=1000
+
+if [[ -z "${DOCKERFILE_PATH:-}" ]]; then
+    DOCKERFILE_PATH="$MAGMA/docker/Dockerfile"
+fi
+
 set -x
 docker build -t "$IMG_NAME" \
     --build-arg GITHUB_TOKEN="$GITHUB_TOKEN" \
@@ -53,7 +58,7 @@ docker build -t "$IMG_NAME" \
     --build-arg USER_ID=$USER_ID \
     --build-arg GROUP_ID=$GROUP_ID \
     $mode_flag $isan_flag $harden_flag \
-    -f "$MAGMA/docker/Dockerfile" "$MAGMA"
+    -f "$DOCKERFILE_PATH" "$MAGMA"
 set +x
 
 echo "$IMG_NAME"
