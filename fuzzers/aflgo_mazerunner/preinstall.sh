@@ -29,3 +29,6 @@ update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-${LLVM_V
 mkdir -p /usr/lib/bfd-plugins
 cp /usr/lib/llvm-${LLVM_VERSION}/lib/LLVMgold.so /usr/lib/bfd-plugins
 cp /usr/lib/llvm-${LLVM_VERSION}/lib/libLTO.so /usr/lib/bfd-plugins
+
+# ugly fix for installing symsan python solver lib
+chmod 777 /usr/local/lib/python*/dist-packages
