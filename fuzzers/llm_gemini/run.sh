@@ -32,4 +32,11 @@ ulimit -c 0
 python3 "$FUZZER/symsan/mazerunner/llm_baseline.py" \
     -s "$TARGET/BBtargets/${BUGID}" \
     -- "$OUT/symsan/$BUGID/${PROGRAM}.taint" $ARGS
-sleep 5
+
+# fill up cannary buffer to let monitor read it
+i=0
+while [ $i -lt 10 ]; do
+    "$OUT/symsan/$BUGID/${PROGRAM}.taint" init_llm
+    sleep 1
+    i=$((i + 1))
+done
