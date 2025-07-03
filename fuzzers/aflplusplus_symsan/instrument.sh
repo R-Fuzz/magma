@@ -89,7 +89,6 @@ build_bitcode() {(
 
 # static analysis
 static_analyze() {
-    echo "LLVMFuzzerTestOneInput" > ${IR_DIR}/BBEntry.txt
 
     blacklist=("XML005" "XML007" "XML013" "XML014" "XML015")
     find "$TARGET/patches/bugs" -name "*.patch" | \
@@ -118,6 +117,13 @@ static_analyze() {
                 BCS=$(find ${IR_DIR} -name "*.0.0.preopt.bc")
             fi
             for BC in $BCS; do
+                libfuzzer=$(llvm-nm-14 $BC | grep -c -- " LLVMFuzzerTestOneInput$") || true
+                if [[ $libfuzzer -eq 0 ]]; then
+                    echo "main" > ${IR_DIR}/BBEntry.txt
+                else
+                    echo "LLVMFuzzerTestOneInput" > ${IR_DIR}/BBEntry.txt
+                fi
+
                 PROGRAM="$(basename ${BC%%.0*})"
                 PREFIX="${BUG_ID}_${PROGRAM}"
                 $FUZZER/kernel-analyzer/build/lib/KAMain \
@@ -144,6 +150,13 @@ static_analyze() {
         cat ${IR_DIR}/*_BBtargets.txt > ${IR_DIR}/BBTargets.txt
         BCS=$(find ${IR_DIR} -name "*.0.0.preopt.bc")
         for BC in $BCS; do
+            libfuzzer=$(llvm-nm-14 $BC | grep -c -- " LLVMFuzzerTestOneInput$") || true
+            if [[ $libfuzzer -eq 0 ]]; then
+                echo "main" > ${IR_DIR}/BBEntry.txt
+            else
+                echo "LLVMFuzzerTestOneInput" > ${IR_DIR}/BBEntry.txt
+            fi
+
             PROGRAM="$(basename ${BC%%.0*})"
             PREFIX="${PROGRAM}"
             $FUZZER/kernel-analyzer/build/lib/KAMain \
@@ -157,7 +170,10 @@ static_analyze() {
                 "${BC}" 2> ${IR_DIR}/${PREFIX}.log
         done
         # generate instrumentation list for afl++
-        cat ${IR_DIR}/*_distance.txt | grep '^fun:'> ${IR_DIR}/afl_allow.txt
+        cat ${IR_DIR}/*_distance.txt | grep '^fun:'> ${IR_DIR}/afl_allow.txt || true
+        if [ ! -s "$IR_DIR/afl_allow.txt" ]; then
+            rm "$IR_DIR/afl_allow.txt"
+        fi
     fi
 }
 
