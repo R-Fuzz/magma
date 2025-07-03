@@ -15,6 +15,10 @@ export CXX="clang++-${LLVM_VERSION}"
 export CC="clang-${LLVM_VERSION}"
 export LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
 
+# Get Python version info for dynamic path handling
+PYTHON_VERSION_SHORT=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+PYTHON_VERSION_NO_DOT=$(python3 -c 'import sys; print(f"{sys.version_info.major}{sys.version_info.minor}")')
+
 build_aflpp() {(
     cd "$FUZZER/aflpp"
     make NO_NYX=1 source-only -j$(nproc)
@@ -48,8 +52,8 @@ build_mazerunner() {(
     mkdir build && cd build
     cmake -DCMAKE_INSTALL_PREFIX=. ../
     make -j$(nproc) && make install
-    mkdir -p /home/.local/lib/python3.10/site-packages
-    cp python/symsan.cpython-310-x86_64-linux-gnu.so /home/.local/lib/python3.10/site-packages/
+    mkdir -p /home/.local/lib/python${PYTHON_VERSION_SHORT}/site-packages
+    cp python/symsan.cpython-${PYTHON_VERSION_NO_DOT}-x86_64-linux-gnu.so /usr/local/lib/python${PYTHON_VERSION_SHORT}/dist-packages
 
     # rebuild libc++
     export KO_CC=clang-${LLVM_VERSION}
