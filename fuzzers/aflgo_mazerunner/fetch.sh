@@ -14,3 +14,8 @@ git clone --depth 1 -b mzt https://github.com/sgzeng/kernel-analyzer.git "$FUZZE
 
 git clone --depth 1 -b magma https://github.com/sgzeng/aflgo.git "$FUZZER/aflgo"
 cp "$FUZZER/src/afl_driver.cpp" "$FUZZER/aflgo/afl_driver.cpp"
+
+cd "$FUZZER"
+wget https://github.com/madler/zlib/archive/refs/tags/v1.2.13.tar.gz
+wget https://ftp.gnu.org/gnu/readline/readline-8.1.2.tar.gz
+wget https://ftp.gnu.org/gnu/termcap/termcap-1.3.1.tar.gz

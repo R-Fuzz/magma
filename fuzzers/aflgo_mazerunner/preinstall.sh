@@ -32,3 +32,16 @@ cp /usr/lib/llvm-${LLVM_VERSION}/lib/libLTO.so /usr/lib/bfd-plugins
 
 # ugly fix for installing symsan python solver lib
 chmod 777 /usr/local/lib/python*/dist-packages
+
+# install pip packages
+pip install \
+    kiwisolver \
+    lit \
+    numpy \
+    packaging \
+    psutil \
+    python-dateutil \
+    pyparsing \
+    z3==0.2.0 \
+    z3-solver==4.13.0.0 \
+    --no-cache-dir

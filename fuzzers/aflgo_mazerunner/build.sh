@@ -48,7 +48,6 @@ build_aflgo() {(
 
 build_mazerunner() {(
     cd "$FUZZER/symsan"
-    git pull && git checkout main
     mkdir build && cd build
     cmake -DCMAKE_INSTALL_PREFIX=. ../
     make -j$(nproc) && make install
@@ -63,9 +62,6 @@ build_mazerunner() {(
     # install new libc++
     cd "$FUZZER/symsan/build/"
     make install
-
-    # install pip packages
-    pip install -r $FUZZER/symsan/mazerunner/requirements.txt --no-cache-dir
 )}
 
 build_static_analyzer() {(
@@ -73,7 +69,6 @@ build_static_analyzer() {(
     alias clang++=$CXX
 
     cd "$FUZZER/kernel-analyzer"
-    git pull
     make LLVM_BUILD=/usr/lib/llvm-${LLVM_VERSION}/ -j$(nproc)
 
 )}
@@ -87,7 +82,6 @@ build_symsan_instrumented_libs() {(
     export KO_NO_NATIVE_ZLIB=1
 
     #zlib
-    wget https://github.com/madler/zlib/archive/refs/tags/v1.2.13.tar.gz
     tar zxf v1.2.13.tar.gz
     pushd zlib-1.2.13
     ./configure --static --prefix=$FUZZER/zlib-1.2.13/zlib-1.2.13
@@ -95,7 +89,6 @@ build_symsan_instrumented_libs() {(
     popd
 
     #readline
-    wget https://ftp.gnu.org/gnu/readline/readline-8.1.2.tar.gz
     tar zxf readline-8.1.2.tar.gz
     pushd readline-8.1.2
     ./configure --disable-shared
@@ -103,7 +96,6 @@ build_symsan_instrumented_libs() {(
     popd
 
     #termcap
-    wget https://ftp.gnu.org/gnu/termcap/termcap-1.3.1.tar.gz
     tar zxf termcap-1.3.1.tar.gz
     pushd termcap-1.3.1
     ./configure --disable-shared
@@ -121,7 +113,6 @@ build_llvm_bitcode_libs() {(
     unset LIBS
 
     #zlib
-    wget https://github.com/madler/zlib/archive/refs/tags/v1.2.13.tar.gz
     tar zxf v1.2.13.tar.gz
     pushd zlib-1.2.13
     ./configure --static
@@ -129,7 +120,6 @@ build_llvm_bitcode_libs() {(
     popd
 
     #termcap
-    wget https://ftp.gnu.org/gnu/termcap/termcap-1.3.1.tar.gz
     tar zxf termcap-1.3.1.tar.gz
     pushd termcap-1.3.1
     ./configure --disable-shared
@@ -140,7 +130,6 @@ build_llvm_bitcode_libs() {(
     popd
 
     #readline
-    wget https://ftp.gnu.org/gnu/readline/readline-8.1.2.tar.gz
     tar zxf readline-8.1.2.tar.gz
     pushd readline-8.1.2
     ./configure --disable-shared
