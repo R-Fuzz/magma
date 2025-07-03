@@ -19,14 +19,25 @@ mkdir -p "$WORK"
 mkdir -p "$WORK/lib" "$WORK/include"
 
 cd "$TARGET/repo"
-./autogen.sh
-./configure --disable-shared --prefix="$WORK"
+(set +e ; ./autogen.sh) || \
+echo "autogen.sh failed to grab config.guess and config.sub from upstream master, continuing anyway"
+./configure --disable-shared --prefix="$WORK" \
+    --disable-lzma --disable-jpeg
 make -j$(nproc) clean
 make -j$(nproc)
 make install
 
 cp "$WORK/bin/tiffcp" "$OUT/"
+if [ -f "$TARGET/repo/tools/tiffcp.0.0.preopt.bc" ]; then
+    cp $TARGET/repo/tools/tiffcp.*.bc "$OUT/"
+fi
+
 $CXX $CXXFLAGS -std=c++11 -I$WORK/include \
-    contrib/oss-fuzz/tiff_read_rgba_fuzzer.cc -o $OUT/tiff_read_rgba_fuzzer \
-    $WORK/lib/libtiffxx.a $WORK/lib/libtiff.a -lz -ljpeg -Wl,-Bstatic -llzma -Wl,-Bdynamic \
+    contrib/oss-fuzz/tiff_read_rgba_fuzzer.cc \
+    -c -o $OUT/tiff_read_rgba_fuzzer.o
+
+$CXX $CXXFLAGS -std=c++11 -I$WORK/include \
+    $OUT/tiff_read_rgba_fuzzer.o -o $OUT/tiff_read_rgba_fuzzer \
+    $WORK/lib/libtiffxx.a $WORK/lib/libtiff.a \
+    -lz -Wl,-Bstatic -Wl,-Bdynamic \
     $LDFLAGS $LIBS
