@@ -104,35 +104,46 @@ start_campaign()
     {
         export SHARED="$CAMPAIGN_CACHEDIR/$CACHECID"
         mkdir -p "$SHARED" && chmod 777 "$SHARED"
-
-        echo_time "Container $FUZZER/$TARGET/$PROGRAM/$ARCID started on CPU $AFFINITY"
-        "$MAGMA"/tools/captain/start.sh &> \
-            "${LOGDIR}/${FUZZER}_${TARGET}_${PROGRAM}_${ARCID}_container.log"
+        if [ -n "$BUGID" ]; then
+            echo_time "Container $FUZZER/$TARGET/$PROGRAM/${BUGID}/$ARCID started on CPU $AFFINITY"
+            "$MAGMA"/tools/captain/start.sh &> \
+                "${LOGDIR}/${FUZZER}_${TARGET}_${PROGRAM}_${BUGID}_${ARCID}_container.log"
+        else
+            echo_time "Container $FUZZER/$TARGET/$PROGRAM/$ARCID started on CPU $AFFINITY"
+            "$MAGMA"/tools/captain/start.sh &> \
+                "${LOGDIR}/${FUZZER}_${TARGET}_${PROGRAM}_${ARCID}_container.log"
+        fi
         echo_time "Container $FUZZER/$TARGET/$PROGRAM/$ARCID stopped"
 
         if [ ! -z $POC_EXTRACT ]; then
             "$MAGMA"/tools/captain/extract.sh
         fi
 
-        if [ -z $NO_ARCHIVE ]; then
+        dest_dir="${CAMPAIGN_ARDIR}/${ARCID}"
+        mkdir -p "$dest_dir"
+
+        if [ -z "$NO_ARCHIVE" ]; then
             # only one tar job runs at a time, to prevent out-of-storage errors
-            mutex $MUX_TAR \
-              tar -cf "${CAMPAIGN_ARDIR}/${ARCID}/${TARBALL_BASENAME}.tar" -C "$SHARED" . &>/dev/null && \
+            mutex "$MUX_TAR" \
+            tar -cf "${dest_dir}/${TARBALL_BASENAME}.tar" -C "$SHARED" . &>/dev/null && \
             rm -rf "$SHARED"
         else
-            # overwrites empty $ARCID directory with the $SHARED directory
-            mv -T "$SHARED" "${CAMPAIGN_ARDIR}/${ARCID}"
+            # overwrite empty $ARCID directory with the $SHARED directory
+            mv -T "$SHARED" "$dest_dir"
         fi
     }
     export -f launch_campaign
 
     while : ; do
-        export CAMPAIGN_CACHEDIR="$CACHEDIR/$FUZZER/$TARGET/$PROGRAM"
-        export CACHECID=$(mutex $MUX_CID \
-                get_next_cid "$CAMPAIGN_CACHEDIR")
-        export CAMPAIGN_ARDIR="$ARDIR/$FUZZER/$TARGET/$PROGRAM"
-        export ARCID=$(mutex $MUX_CID \
-                get_next_cid "$CAMPAIGN_ARDIR")
+        if [ -n "$BUGID" ]; then
+            export CAMPAIGN_CACHEDIR="$CACHEDIR/$FUZZER/$TARGET/$PROGRAM/$BUGID"
+            export CAMPAIGN_ARDIR="$ARDIR/$FUZZER/$TARGET/$PROGRAM/$BUGID"
+        else
+            export CAMPAIGN_CACHEDIR="$CACHEDIR/$FUZZER/$TARGET/$PROGRAM"
+            export CAMPAIGN_ARDIR="$ARDIR/$FUZZER/$TARGET/$PROGRAM"
+        fi
+        export CACHECID=$(mutex $MUX_CID get_next_cid "$CAMPAIGN_CACHEDIR")
+        export ARCID=$(mutex $MUX_CID get_next_cid "$CAMPAIGN_ARDIR")
 
         errno_lock=69
         SHELL=/bin/bash flock -xnF -E $errno_lock "${CAMPAIGN_CACHEDIR}/${CACHECID}" \
@@ -282,18 +293,18 @@ for FUZZER in "${FUZZERS[@]}"; do
             echo_time "Found ${#BUGIDS[@]} bugs for $PROGRAM in $BUG_DIR"
             if [[ "$FUZZER" == *llm* || "$FUZZER" == *mazerunner ]]; then
                 for BUGID in "${BUGIDS[@]}"; do
-                    echo_time "Starting campaigns for $PROGRAM $ARGS with bugs: ${BUGID}"
                     export BUGID
                     for ((i=0; i<$REPEAT; i++)); do
                         export NUMWORKERS="$(get_var_or_default $FUZZER 'CAMPAIGN_WORKERS')"
                         export AFFINITY=$(allocate_workers)
+                        echo_time "Starting campaigns. cmd=<$PROGRAM $ARGS>, bug=${BUGID}"
                         if [[ "$RUN_SEQUENTIALLY" == "1" ]]; then
                             start_ex
                         else
                             start_ex &
                         fi
                         if [[ "$FUZZER" == *gemini* ]]; then
-                        # bypass gemini's free token limit
+                        # bypass Google's free token limit
                             sleep 30s
                         fi
                     done
