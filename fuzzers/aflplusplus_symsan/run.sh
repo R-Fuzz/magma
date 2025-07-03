@@ -41,6 +41,7 @@ export SYMSAN_USE_JIGSAW=1
 export SYMSAN_USE_NESTED=1
 #export SYMSAN_SAVE_SOLVED=1
 #export AFL_CUSTOM_MUTATOR_ONLY=1
+export SYMSAN_DONT_EXIT_ON_MEMERROR=1
 
 "$FUZZER/aflpp/afl-fuzz" -m none \
     -i "$TARGET/corpus/$PROGRAM" -o "$SHARED/findings" \
