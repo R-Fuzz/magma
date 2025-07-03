@@ -55,6 +55,10 @@ if [ -z "$BUGID" ]; then
     BUGID="ALL"
 fi
 
+if [[ "$FUZZER" != *llm* ]]; then
+    NETWORK_ACCESS="--network=none"
+fi
+
 if [ -t 1 ]; then
     docker run -it $flag_volume \
         --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
@@ -69,7 +73,7 @@ else
         --env=PROGRAM="$PROGRAM" --env=ARGS="$ARGS" \
         --env=FUZZARGS="$FUZZARGS" --env=POLL="$POLL" --env=TIMEOUT="$TIMEOUT" \
         --env=BUGID="$BUGID" \
-        --network=none \
+        $NETWORK_ACCESS \
         $flag_aff $flag_ep "$IMG_NAME"
     )
     container_id=$(cut -c-12 <<< $container_id)

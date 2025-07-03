@@ -51,14 +51,25 @@ if [[ -z "${DOCKERFILE_PATH:-}" ]]; then
 fi
 
 set -x
-docker build -t "$IMG_NAME" \
-    --build-arg GITHUB_TOKEN="$GITHUB_TOKEN" \
-    --build-arg fuzzer_name="$FUZZER" \
-    --build-arg target_name="$TARGET" \
-    --build-arg USER_ID=$USER_ID \
-    --build-arg GROUP_ID=$GROUP_ID \
-    $mode_flag $isan_flag $harden_flag \
-    -f "$DOCKERFILE_PATH" "$MAGMA"
+if [[ "$FUZZER" == *llm* || "$FUZZER" == *mazerunner ]]; then
+    docker build -t "$IMG_NAME" \
+        --build-arg GITHUB_TOKEN="$GITHUB_TOKEN" \
+        --build-arg GOOGLE_API_KEY="$GOOGLE_API_KEY" \
+        --build-arg fuzzer_name="$FUZZER" \
+        --build-arg target_name="$TARGET" \
+        --build-arg USER_ID=$USER_ID \
+        --build-arg GROUP_ID=$GROUP_ID \
+        $mode_flag $isan_flag $harden_flag \
+        -f "$DOCKERFILE_PATH" "$MAGMA"
+else
+    docker build -t "$IMG_NAME" \
+        --build-arg fuzzer_name="$FUZZER" \
+        --build-arg target_name="$TARGET" \
+        --build-arg USER_ID=$USER_ID \
+        --build-arg GROUP_ID=$GROUP_ID \
+        $mode_flag $isan_flag $harden_flag \
+        -f "$DOCKERFILE_PATH" "$MAGMA"
+fi
 set +x
 
 echo "$IMG_NAME"

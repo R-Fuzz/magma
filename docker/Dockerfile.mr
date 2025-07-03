@@ -10,6 +10,11 @@ ENV MAGMA=${MAGMA_R}/${magma_path}
 ARG fuzzer_name
 ARG fuzzer_path=fuzzers/${fuzzer_name}
 
+USER root:root
+
+COPY --chown=magma:magma ${magma_root}/${fuzzer_path}/preinstall.sh ${FUZZER}
+RUN ${FUZZER}/preinstall.sh
+
 USER magma:magma
 
 COPY --chown=magma:magma ${magma_root}/${fuzzer_path}/build.sh ${FUZZER}
@@ -17,3 +22,6 @@ RUN ${FUZZER}/build.sh
 
 COPY --chown=magma:magma ${magma_root}/${fuzzer_path}/run.sh ${FUZZER}
 COPY --chown=magma:magma ${magma_root}/${fuzzer_path}/runonce.sh ${FUZZER}
+
+ARG GOOGLE_API_KEY
+ENV GEMINI_API_KEY=${GOOGLE_API_KEY}

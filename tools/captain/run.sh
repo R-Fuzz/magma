@@ -251,13 +251,13 @@ for FUZZER in "${FUZZERS[@]}"; do
         else
             echo_time "Building $IMG_NAME"
             # If FUZZER starts with llm, set DOCKERFILE_PATH
-            if [[ "$FUZZER" == llm* ]]; then
+            if [[ "$FUZZER" == *llm* ]]; then
                 # Check if magma/aflgo_mazerunner/$TARGET exists
                 if ! docker image inspect "magma/aflgo_mazerunner/${TARGET}" > /dev/null 2>&1; then
                     echo_time "ERROR: Please build the required image magma/aflgo_mazerunner/${TARGET} first. Skipping $FUZZER/$TARGET."
                     continue
                 fi
-                export DOCKERFILE_PATH="$MAGMA/fuzzers/$FUZZER/Dockerfile"
+                export DOCKERFILE_PATH="$MAGMA/docker/Dockerfile.mr"
             else
                 unset DOCKERFILE_PATH
             fi
@@ -274,14 +274,15 @@ for FUZZER in "${FUZZERS[@]}"; do
             export ARGS="$(get_var_or_default $FUZZER $TARGET $PROGRAM 'ARGS')"
 
             # Get bug IDs for the current program
-            BUG_DIR="$MAGMA/targets/$PROGRAM/patches/bugs"
+            BUG_DIR="$MAGMA/targets/$TARGET/patches/bugs"
             BUGIDS=()
             if [ -d "$BUG_DIR" ]; then
                 BUGIDS=($(basename -a "$BUG_DIR"/*.patch | sed 's/\.patch$//'))
             fi
-            if [[ "$FUZZER" == llm* || "$FUZZER" == *mazerunner ]]; then
-                echo_time "Starting campaigns for $PROGRAM $ARGS with bugs: ${BUGIDS[*]}"
+            echo_time "Found ${#BUGIDS[@]} bugs for $PROGRAM in $BUG_DIR"
+            if [[ "$FUZZER" == *llm* || "$FUZZER" == *mazerunner ]]; then
                 for BUGID in "${BUGIDS[@]}"; do
+                    echo_time "Starting campaigns for $PROGRAM $ARGS with bugs: ${BUGID}"
                     export BUGID
                     for ((i=0; i<$REPEAT; i++)); do
                         export NUMWORKERS="$(get_var_or_default $FUZZER 'CAMPAIGN_WORKERS')"

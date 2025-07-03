@@ -26,10 +26,10 @@ fi
 popd
 
 mkdir -p "$SHARED/findings"
+cd "$SHARED/findings"
 
-(
-    ulimit -c 0
-    python3 -u "$FUZZER/symsan/mazerunner/llm_baseline.py" \
-    -s "$TARGET/BBtargets/${BUG_ID}" \
-    -- "$OUT/symsan/$BUGID/$PROGRAM" $ARGS
-)
+ulimit -c 0
+python3 "$FUZZER/symsan/mazerunner/llm_baseline.py" \
+    -s "$TARGET/BBtargets/${BUGID}" \
+    -- "$OUT/symsan/$BUGID/${PROGRAM}.taint" $ARGS
+sleep 5
