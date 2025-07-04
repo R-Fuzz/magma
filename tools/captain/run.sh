@@ -291,7 +291,7 @@ for FUZZER in "${FUZZERS[@]}"; do
                 BUGIDS=($(basename -a "$BUG_DIR"/*.patch | sed 's/\.patch$//'))
             fi
             echo_time "Found ${#BUGIDS[@]} bugs for $PROGRAM in $BUG_DIR"
-            if [[ "$FUZZER" == *llm* || "$FUZZER" == *mazerunner ]]; then
+            if [[ "$FUZZER" == *mazerunner ]]; then
                 for BUGID in "${BUGIDS[@]}"; do
                     export BUGID
                     for ((i=0; i<$REPEAT; i++)); do
@@ -302,10 +302,6 @@ for FUZZER in "${FUZZERS[@]}"; do
                             start_ex
                         else
                             start_ex &
-                        fi
-                        if [[ "$FUZZER" == *gemini* ]]; then
-                        # bypass Google's free token limit
-                            sleep 30s
                         fi
                     done
                 done

@@ -18,9 +18,9 @@ if nm "$OUT/aflgo/$BUGID/$PROGRAM" | grep -E '^[0-9a-f]+\s+[Ww]\s+main$'; then
 fi
 
 pushd "$FUZZER/symsan"
+git fetch --all
+git reset --hard origin/main
 if [ -n "$COMMIT" ]; then
-    git fetch --all
-    git reset --hard origin/main
     git checkout "$COMMIT"
 fi
 popd
@@ -29,14 +29,22 @@ mkdir -p "$SHARED/findings"
 cd "$SHARED/findings"
 
 ulimit -c 0
-python3 "$FUZZER/symsan/mazerunner/llm_baseline.py" \
-    -s "$TARGET/BBtargets/${BUGID}" \
-    -- "$OUT/symsan/$BUGID/${PROGRAM}.taint" $ARGS
+find "$TARGET/patches/bugs" -name "*.patch" | \
+while read patch; do
+    echo "Preparing env for $patch"
+    NAME=${patch##*/}
+    BUGID=${NAME%.patch}
 
-# fill up cannary buffer to let monitor read it
-i=0
-while [ $i -lt 10 ]; do
-    "$OUT/symsan/$BUGID/${PROGRAM}.taint" init_llm
-    sleep 1
-    i=$((i + 1))
+    python3 "$FUZZER/symsan/mazerunner/llm_baseline.py" \
+        -s "$TARGET/BBtargets/${BUGID}" \
+        -l prompt_${BUGID}.log -info ${BUGID} \
+        -- "$OUT/symsan/$BUGID/${PROGRAM}.taint" $ARGS
+
+    # fill up cannary buffer to let monitor read it
+    i=0
+    while [ $i -lt 20 ]; do
+        "$OUT/symsan/$BUGID/${PROGRAM}.taint" llm_${BUGID}
+        sleep 1
+        i=$((i + 1))
+    done
 done
