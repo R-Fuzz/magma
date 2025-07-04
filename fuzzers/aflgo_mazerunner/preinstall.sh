@@ -42,6 +42,5 @@ pip install \
     psutil \
     python-dateutil \
     pyparsing \
-    z3==0.2.0 \
     z3-solver==4.13.0.0 \
     --no-cache-dir
