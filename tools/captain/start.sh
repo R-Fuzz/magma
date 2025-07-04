@@ -59,6 +59,12 @@ if [[ "$FUZZER" != *llm* ]]; then
     NETWORK_ACCESS="--network=none"
 fi
 
+ARGS="@@"
+argname="${PROGRAM}_ARGS"
+if [ ! -z "${!argname}" ]; then
+    ARGS="${!argname}"
+fi
+
 if [ -t 1 ]; then
     docker run -it $flag_volume \
         --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
