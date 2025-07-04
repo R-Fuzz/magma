@@ -11,6 +11,7 @@ if [ ! -d "$FUZZER/aflpp" ] || [ ! -d "$FUZZER/symsan" ]; then
     exit 1
 fi
 
+export LLVM_VERSION=${LLVM_VERSION:-14}
 export CXX="clang++-${LLVM_VERSION}"
 export CC="clang-${LLVM_VERSION}"
 export LLVM_CONFIG="llvm-config-${LLVM_VERSION}"

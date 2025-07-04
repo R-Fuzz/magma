@@ -10,6 +10,7 @@ set -xe
 # - env CFLAGS and CXXFLAGS must be set to link against Magma instrumentation
 ##
 
+export LLVM_VERSION=${LLVM_VERSION:-14}
 TARGET_NAME="$(basename $TARGET)"
 IR_DIR="${OUT}/clang_bc/${TARGET_NAME}"
 mkdir -p "$IR_DIR"
