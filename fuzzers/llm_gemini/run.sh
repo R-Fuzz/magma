@@ -40,7 +40,7 @@ while read patch; do
 
     # fill up cannary buffer to let monitor read it
     i=0
-    while [ $i -lt 20 ]; do
+    while [ $i -lt 60 ]; do
         "$OUT/symsan/$BUGID/${PROGRAM}.taint" llm_${BUGID}
         sleep 1
         i=$((i + 1))
