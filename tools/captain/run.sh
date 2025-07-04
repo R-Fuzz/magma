@@ -171,7 +171,9 @@ start_ex()
     trap release_workers EXIT
 
     start_campaign
-    exit 0
+    if [[ "$RUN_SEQUENTIALLY" != "1" ]]; then
+        exit 0
+    fi
 }
 export -f start_ex
 
@@ -310,7 +312,11 @@ for FUZZER in "${FUZZERS[@]}"; do
                 for ((i=0; i<$REPEAT; i++)); do
                     export NUMWORKERS="$(get_var_or_default $FUZZER 'CAMPAIGN_WORKERS')"
                     export AFFINITY=$(allocate_workers)
-                    start_ex &
+                    if [[ "$RUN_SEQUENTIALLY" == "1" ]]; then
+                        start_ex
+                    else
+                        start_ex &
+                    fi
                 done
             fi
         done
