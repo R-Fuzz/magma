@@ -33,16 +33,36 @@ while read patch; do
     NAME=${patch##*/}
     BUGID=${NAME%.patch}
 
+    DISTANCE_FILE="$TARGET/BBtargets/${BUGID}/distance.cfg.txt"
+    POLICY_FILE="$TARGET/BBtargets/${BUGID}/policy.txt"
+    if [ ! -f "$DISTANCE_FILE" ] || [ ! -s "$DISTANCE_FILE" ]; then
+        echo "ERROR: $DISTANCE_FILE for $BUGID is missing or empty" >&2
+        continue
+    fi
+    if [ ! -f "$POLICY_FILE" ] || [ ! -s "$POLICY_FILE" ]; then
+        echo "ERROR: $POLICY_FILE for $BUGID is missing or empty" >&2
+        continue
+    fi
+    if [ ! -f "$OUT/aflgo/$BUGID/${PROGRAM}" ]; then
+        echo "ERROR: Executable File $OUT/aflgo/$BUGID/${PROGRAM} not found" >&2
+        continue
+    fi
+    
     python3 "$FUZZER/symsan/mazerunner/llm_baseline.py" \
         -s "$TARGET/BBtargets/${BUGID}" \
         -l prompt_${BUGID}.log -info ${BUGID} \
-        -- "$OUT/symsan/$BUGID/${PROGRAM}.taint" $ARGS
+        -- "$OUT/aflgo/$BUGID/${PROGRAM}" $ARGS
 
-    # fill up cannary buffer to let monitor read it
+    # fill up canary buffer to let monitor read it
+    if [ -f "llm_${BUGID}" ]; then
+        "$OUT/aflgo/$BUGID/${PROGRAM}" llm_${BUGID}
+    fi
     i=0
     while [ $i -lt 60 ]; do
-        "$OUT/symsan/$BUGID/${PROGRAM}.taint" llm_${BUGID}
         sleep 1
+        if [ -f "llm_${BUGID}" ]; then
+            "$OUT/aflgo/$BUGID/${PROGRAM}.taint" llm_${BUGID} &> /dev/null
+        fi
         i=$((i + 1))
     done
 done
