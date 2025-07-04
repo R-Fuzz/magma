@@ -13,9 +13,7 @@
 # - env COMMIT: git commit hash of mazerunner
 ##
 
-if nm "$OUT/aflgo/$BUGID/$PROGRAM" | grep -E '^[0-9a-f]+\s+[Ww]\s+main$'; then
-    ARGS="@@"
-fi
+ARGS=${ARGS:-"@@"}
 
 pushd "$FUZZER/symsan"
 git fetch --all
