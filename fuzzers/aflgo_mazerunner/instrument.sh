@@ -157,8 +157,8 @@ build_aflgo() {
                 exit 1
             fi
 
-            export CFLAGS="-O0 -g -distance=$DISTANCE_FILE"
-            export CXXFLAGS="-O0 -g -distance=$DISTANCE_FILE"
+            export CFLAGS="$CFLAGS -O0 -g -distance=$DISTANCE_FILE"
+            export CXXFLAGS="$CXXFLAGS -O0 -g -distance=$DISTANCE_FILE"
 
             export BUG_DIR="$OUT/aflgo/${BUG_ID}"
             export LIBS="$LIBS -l:afl_driver.o -lstdc++"
