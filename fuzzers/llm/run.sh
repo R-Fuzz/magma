@@ -11,6 +11,7 @@
 # - env FUZZARGS: extra arguments to pass to the fuzzer
 # - env BUGID: ID of the bug under $PROGRAM
 # - env COMMIT: git commit hash of mazerunner
+# - env LLM_MODEL: name of the LLM model to use
 ##
 
 ARGS=${ARGS:-"@@"}
@@ -51,6 +52,7 @@ while read patch; do
     
     python3 "$FUZZER/symsan/mazerunner/llm_baseline.py" \
         -s "$TARGET/BBtargets/${BUGID}" \
+        -m "$LLM_MODEL" \
         -l prompt_${BUGID}.log -info ${BUGID} \
         -- "$PROGRAM_PATH" $ARGS
 

@@ -55,6 +55,7 @@ if [[ "$FUZZER" == *llm* || "$FUZZER" == *mazerunner ]]; then
     docker build -t "$IMG_NAME" \
         --build-arg GITHUB_TOKEN="$GITHUB_TOKEN" \
         --build-arg GOOGLE_API_KEY="$GOOGLE_API_KEY" \
+        --build-arg OPENAI_API_KEY="$OPENAI_API_KEY" \
         --build-arg fuzzer_name="$FUZZER" \
         --build-arg target_name="$TARGET" \
         --build-arg USER_ID=$USER_ID \

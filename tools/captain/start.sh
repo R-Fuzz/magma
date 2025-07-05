@@ -59,6 +59,13 @@ if [[ "$FUZZER" != *llm* ]]; then
     NETWORK_ACCESS="--network=none"
 fi
 
+# Only set LLM_MODEL env for llm fuzzers
+if [[ "$FUZZER" == *llm* ]]; then
+    LLM_ENV="--env=LLM_MODEL=$LLM_MODEL"
+else
+    LLM_ENV=""
+fi
+
 ARGS="@@"
 argname="${PROGRAM}_ARGS"
 if [ ! -z "${!argname}" ]; then
@@ -71,6 +78,7 @@ if [ -t 1 ]; then
         --env=PROGRAM="$PROGRAM" --env=ARGS="$ARGS" \
         --env=FUZZARGS="$FUZZARGS" --env=POLL="$POLL" --env=TIMEOUT="$TIMEOUT" \
         --env=BUGID="$BUGID" \
+        $LLM_ENV $NETWORK_ACCESS \
         $flag_aff $flag_ep "$IMG_NAME"
 else
     container_id=$(
@@ -79,7 +87,7 @@ else
         --env=PROGRAM="$PROGRAM" --env=ARGS="$ARGS" \
         --env=FUZZARGS="$FUZZARGS" --env=POLL="$POLL" --env=TIMEOUT="$TIMEOUT" \
         --env=BUGID="$BUGID" \
-        $NETWORK_ACCESS \
+        $LLM_ENV $NETWORK_ACCESS \
         $flag_aff $flag_ep "$IMG_NAME"
     )
     container_id=$(cut -c-12 <<< $container_id)

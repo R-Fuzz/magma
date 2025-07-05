@@ -24,4 +24,6 @@ COPY --chown=magma:magma ${magma_root}/${fuzzer_path}/run.sh ${FUZZER}
 COPY --chown=magma:magma ${magma_root}/${fuzzer_path}/runonce.sh ${FUZZER}
 
 ARG GOOGLE_API_KEY
+ARG OPENAI_API_KEY
 ENV GEMINI_API_KEY=${GOOGLE_API_KEY}
+ENV OPENAI_API_KEY=${OPENAI_API_KEY}
