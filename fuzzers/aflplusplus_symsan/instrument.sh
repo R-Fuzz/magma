@@ -217,7 +217,6 @@ build_symsan() {(
         LIBS="$LIBS -licuio -licui18n -licuuc -licudata"
     elif [ "poppler" = $TARGET_NAME ]; then
         OPTFLAGS="$OPTFLAGS -taint-abilist=${FUZZER}/src/poppler.txt"
-        CXXFLAGS="$CXXFLAGS -fuse-ld=lld-${LLVM_VERSION}"
         LIBS="$LIBS -lbrotlidec -ljpeg -lz -lopenjp2 -lpng -ltiff -llcms2 -lm -lpthread -pthread"
     fi
 
@@ -242,7 +241,7 @@ build_symsan() {(
         else
             LIBS="$ORIG_LIBS"
         fi
-        $CXX $CXXFLAGS $IOBJ $LDFLAGS $LIBS -o ${PROGRAM}.taint
+        $CXX $CXXFLAGS $IOBJ $LDFLAGS $LIBS -o ${PROGRAM}.taint -no-pie
     done
 )}
 
