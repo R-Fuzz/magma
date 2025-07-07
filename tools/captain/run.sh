@@ -252,7 +252,9 @@ cleanup()
     fi
 }
 
-trap cleanup EXIT
+if [[ "$RUN_SEQUENTIALLY" != "1" ]]; then
+    trap cleanup EXIT
+fi
 
 # schedule campaigns
 for FUZZER in "${FUZZERS[@]}"; do
@@ -303,13 +305,15 @@ for FUZZER in "${FUZZERS[@]}"; do
             if [[ "$FUZZER" == *mazerunner ]]; then
                 for BUGID in "${BUGIDS[@]}"; do
                     export BUGID
+                    echo_time "Starting campaigns. cmd=<$PROGRAM $ARGS>, bug=${BUGID}"
                     for ((i=0; i<$REPEAT; i++)); do
-                        export NUMWORKERS="$(get_var_or_default $FUZZER 'CAMPAIGN_WORKERS')"
-                        export AFFINITY=$(allocate_workers)
-                        echo_time "Starting campaigns. cmd=<$PROGRAM $ARGS>, bug=${BUGID}"
                         if [[ "$RUN_SEQUENTIALLY" == "1" ]]; then
+                            unset NUMWORKERS
+                            unset AFFINITY
                             start_ex
                         else
+                            export NUMWORKERS="$(get_var_or_default $FUZZER 'CAMPAIGN_WORKERS')"
+                            export AFFINITY=$(allocate_workers)
                             start_ex &
                         fi
                     done
@@ -317,11 +321,13 @@ for FUZZER in "${FUZZERS[@]}"; do
             else
                 echo_time "Starting campaigns for $PROGRAM $ARGS"
                 for ((i=0; i<$REPEAT; i++)); do
-                    export NUMWORKERS="$(get_var_or_default $FUZZER 'CAMPAIGN_WORKERS')"
-                    export AFFINITY=$(allocate_workers)
                     if [[ "$RUN_SEQUENTIALLY" == "1" ]]; then
+                        unset NUMWORKERS
+                        unset AFFINITY
                         start_ex
                     else
+                        export NUMWORKERS="$(get_var_or_default $FUZZER 'CAMPAIGN_WORKERS')"
+                        export AFFINITY=$(allocate_workers)
                         start_ex &
                     fi
                 done
