@@ -1,66 +1,66 @@
 #!/usr/bin/env python3
 import json
+import statistics
 import csv
-import sys
+import warnings
+from collections import defaultdict
 
-# Fuzzers to include
-fuzzers = ['selectfuzz', 'aflgo', 'aflplusplus_cmplog', 'aflplusplus_symsan']
+from survival_analysis import parse_args, get_time_to_bug, calc_survival, METRICS
 
-def output_details(json_path, csv_path):
+fuzzers = set()
+
+def output_details(json_path, csv_path, num_trials, trial_length):
+    global fuzzers
     # Load JSON data
     with open(json_path) as f:
         data = json.load(f).get('results', {})
     
-    # Collect bug stats per fuzzer
-    fuzzer_stats = {}
+    # Ignore warnings
+    warnings.simplefilter('ignore')
+    
+    # Collect bug stats per fuzzer using survival analysis functions
+    fuzzer_stats = defaultdict(lambda: defaultdict(dict))
     all_bugs = set()
-    for fuzzer in fuzzers:
-        bug_times = {}
-        if fuzzer not in data:
-            fuzzer_stats[fuzzer] = {}
-            continue
-        for target, progs in data[fuzzer].items():
-            for prog, runs in progs.items():
-                for run_id, metrics in runs.items():
-                    # Reached times = TTR
-                    for bug, t in metrics.get('reached', {}).items():
-                        bug_times.setdefault(bug, {'ttr': [], 'tte': []})
-                        bug_times[bug]['ttr'].append(t)
-                        all_bugs.add(bug)
-                    # Triggered times = TTE
-                    for bug, t in metrics.get('triggered', {}).items():
-                        bug_times.setdefault(bug, {'ttr': [], 'tte': []})
-                        bug_times[bug]['tte'].append(t)
-                        all_bugs.add(bug)
-        # Compute statistics
+    # Use get_time_to_bug function from survival_analysis.py
+    for ttb in get_time_to_bug(data, num_trials):
+        fuzzer = ttb['fuzzer']
+        fuzzers.add(fuzzer)
+        bug = ttb['bug']
+        all_bugs.add(bug)
+        
+        # Do survival analysis for both reached and triggered
         stats = {}
-        for bug, times in bug_times.items():
-            # average and median for TTR
-            if times['ttr']:
-                avg_ttr = int(sum(times['ttr']) / len(times['ttr']))
-                med_ttr = int(sorted(times['ttr'])[len(times['ttr']) // 2])
+        for metric in METRICS:
+            if metric in ttb:
+                surv_time, surv_ci = calc_survival(ttb[metric], trial_length)
+                surv_time_int = int(surv_time) if surv_time is not None else 'T.O'
+                surv_ci_int = int(surv_ci) if surv_ci is not None else 'NA'
             else:
-                avg_ttr = 'T.O'
-                med_ttr = 'T.O'
-            # average and median for TTE
-            if times['tte']:
-                avg_tte = int(sum(times['tte']) / len(times['tte']))
-                med_tte = int(sorted(times['tte'])[len(times['tte']) // 2])
+                surv_time_int = 'T.O'
+                surv_ci_int = 'NA'
+            
+            # Calculate median for comparison
+            times = [t for t in ttb.get(metric, []) if t is not None]
+            if times:
+                med_time = int(statistics.median(times))
             else:
-                avg_tte = 'T.O'
-                med_tte = 'T.O'
-            stats[bug] = {
-                'avg_TTE': avg_tte,
-                'avg_TTR': avg_ttr,
-                'med_TTE': med_tte,
-                'med_TTR': med_ttr
-            }
-        fuzzer_stats[fuzzer] = stats
+                med_time = 'T.O'
+
+            # Calculate success count (number of successful trials)
+            success_count = sum(1 for t in times if t is not None)
+            
+            stats[f'surv_{metric}'] = surv_time_int
+            stats[f'ci_{metric}'] = surv_ci_int
+            stats[f'med_{metric}'] = med_time
+            stats[f'count_{metric}'] = success_count
+        
+        fuzzer_stats[fuzzer][bug] = stats
 
     # Prepare CSV header
     header = ['bug_id']
     for f in fuzzers:
-        header += [f + '_avg_TTE', f + '_avg_TTR', f + '_med_TTE', f + '_med_TTR']
+        for metric in METRICS:
+            header += [f'{f}_surv_{metric}', f'{f}_ci_{metric}', f'{f}_med_{metric}', f'{f}_count_{metric}']
 
     # Write CSV
     with open(csv_path, 'w', newline='') as csvfile:
@@ -70,13 +70,15 @@ def output_details(json_path, csv_path):
             row = [bug]
             for f in fuzzers:
                 stats = fuzzer_stats.get(f, {}).get(bug, {})
-                row.append(stats.get('avg_TTE', 'T.O'))
-                row.append(stats.get('avg_TTR', 'T.O'))
-                row.append(stats.get('med_TTE', 'T.O'))
-                row.append(stats.get('med_TTR', 'T.O'))
+                for metric in METRICS:
+                    row.append(stats.get(f'surv_{metric}', 'T.O'))
+                    row.append(stats.get(f'ci_{metric}', 0))
+                    row.append(stats.get(f'med_{metric}', 'T.O'))
+                    row.append(stats.get(f'count_{metric}', 0))
             writer.writerow(row)
 
 def output_overall(json_path, csv_path):
+    global fuzzers
     # Load results
     with open(json_path) as f:
         data = json.load(f)
@@ -131,9 +133,8 @@ def output_overall(json_path, csv_path):
         for row in rows:
             writer.writerow(row)
 
+
 if __name__ == '__main__':
-    if len(sys.argv) != 3:
-        print(f"Usage: {sys.argv[0]} <results.json>")
-        sys.exit(1)
-    output_overall(sys.argv[1], "overall.csv")
-    output_details(sys.argv[1], "details.csv")
+    # The same argument parser as survival_analysis.py
+    args = parse_args()
+    output_details(args.json, "details.csv", args.num_trials, args.trial_length)
