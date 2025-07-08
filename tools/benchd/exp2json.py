@@ -34,6 +34,9 @@ def parse_args():
         help=("Controls the verbosity of messages. "
             "-v prints info. -vv prints debug. Default: warnings and higher.")
         )
+    parser.add_argument('--pretty', action='store_true',
+        help="Output JSON with pretty formatting (indent=2). If specified, "
+             "output filename will have '_pretty' suffix added.")
     return parser.parse_args()
 
 def walklevel(some_dir, level=1):
@@ -95,6 +98,9 @@ def extract_monitor_dumps(tarball, dest):
     os.system(f'tar -xf "{tarball}" --strip-components={ccount} -C "{dest}" {monitor}')
 
 def generate_monitor_df(dumpdir, campaign):
+    if not os.path.isdir(dumpdir):
+        raise FileNotFoundError("monitor directory is missing")
+
     def row_generator():
         files = os.listdir(dumpdir)
         if 'tmp' in files:
@@ -114,20 +120,17 @@ def generate_monitor_df(dumpdir, campaign):
                 ))
                 continue
 
-    # use a list in case pd.DataFrame() can pre-allocate ahead of time
     rows = list(row_generator())
     if len(rows) == 0:
-        workdir, _, fuzzer, target, program, run = path_split_last(campaign, 5)
-        name = f"{fuzzer}/{target}/{program}/{run}"
-        logfile = os.path.join(workdir, "log",
-            f"{name.replace('/', '_')}_container.log")
-        logging.warning(
-            "%s contains no monitor logs. Check the corresponding campaign "
-            "log file for more information: %s", name, logfile
-        )
+        # Directory exists but contains no logs
+        raise ValueError("monitor directory present but contains no logs")
 
     df = pd.DataFrame(rows)
-    df.set_index('TIME', inplace=True)
+    try:
+        df.set_index('TIME', inplace=True)
+    except KeyError:
+        # CSV files exist but missing TIME column or malformed
+        raise ValueError("monitor logs exist but malformed or empty (missing TIME column)")
     df.fillna(0, inplace=True)
     df = df.astype(int)
     del rows
@@ -148,17 +151,21 @@ def process_one_campaign(path):
         dumpdir = path
 
     df = None
+    reason = None
     try:
         df = generate_monitor_df(os.path.join(dumpdir, "monitor"), path)
+    except FileNotFoundError as ex:
+        reason = str(ex)
+    except ValueError as ex:
+        reason = str(ex)
     except Exception as ex:
-        name = f"{fuzzer}/{target}/{program}/{run}"
-        logging.exception("Encountered exception when processing %s. Details: "
-            "%s", name, ex)
+        # Catch-all for unexpected errors, but do not print traceback
+        reason = f"unhandled exception: {ex}"
     finally:
         if istarball:
             clear_dir(dumpdir)
             os.rmdir(dumpdir)
-    return fuzzer, target, program, run, df
+    return fuzzer, target, program, run, df, reason
 
 def collect_experiment_data(workdir, workers):
     def init(*args):
@@ -173,13 +180,13 @@ def collect_experiment_data(workdir, workers):
         results = pool.starmap(process_one_campaign,
             ((path,) for path in find_campaigns(workdir))
         )
-        for fuzzer, target, program, run, df in results:
+        for fuzzer, target, program, run, df, reason in results:
             if df is not None:
                 experiment[fuzzer][target][program][run] = df
             else:
                 # TODO add an empty df so that the run is accounted for
                 name = f"{fuzzer}/{target}/{program}/{run}"
-                logging.warning("%s has been omitted!", name)
+                logging.warning("%s has been omitted! Reason: %s", name, reason)
     return experiment
 
 def get_ttb_from_df(df):
@@ -236,11 +243,27 @@ def main():
         # TODO add configuration options and other experiment parameters
     }
 
-    data = json.dumps(output).encode()
-    if args.outfile == "-":
+    # Determine output format and filename
+    if args.pretty:
+        json_str = json.dumps(output, indent=2)
+        if args.outfile != "-":
+            # Add '_pretty' suffix to filename
+            base_name = args.outfile
+            if base_name.endswith('.json'):
+                base_name = base_name[:-5]  # Remove .json extension
+            outfile = f"{base_name}_pretty.json"
+        else:
+            outfile = "-"
+    else:
+        json_str = json.dumps(output)
+        outfile = args.outfile
+
+    # Write output
+    data = json_str.encode()
+    if outfile == "-":
         sys.stdout.buffer.write(data)
     else:
-        with open(args.outfile, "wb") as f:
+        with open(outfile, "wb") as f:
             f.write(data)
 
 if __name__ == '__main__':
