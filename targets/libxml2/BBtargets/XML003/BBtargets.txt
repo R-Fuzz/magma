@@ -1,7 +1,0 @@
-parser.c:8054
-parser.c:8055
-parser.c:8056
-parser.c:8057
-parser.c:8058
-parser.c:8059
-parser.c:8060
