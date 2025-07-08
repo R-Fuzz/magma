@@ -57,7 +57,6 @@ build_bitcode() {(
 
 # static analysis
 static_analyze() {
-    echo "LLVMFuzzerTestOneInput" > ${IR_DIR}/BBEntry.txt
 
     find "$TARGET/patches/bugs" -name "*.patch" | \
     while read patch; do
@@ -84,22 +83,30 @@ static_analyze() {
 
             BCS=$(find ${IR_DIR} -name "*.0.0.preopt.bc")
             for BC in $BCS; do
+                libfuzzer=$(llvm-nm-${LLVM_VERSION} $BC | grep -c -- " LLVMFuzzerTestOneInput$") || true
+                if [[ $libfuzzer -eq 0 ]]; then
+                    echo "main" > ${IR_DIR}/BBEntry.txt
+                else
+                    echo "LLVMFuzzerTestOneInput" > ${IR_DIR}/BBEntry.txt
+                fi
                 PROGRAM="$(basename ${BC%%.0*})"
                 PREFIX="${BUG_ID}_${PROGRAM}"
                 $FUZZER/kernel-analyzer/build/lib/KAMain \
                     --entry-list=${IR_DIR}/BBEntry.txt \
                     --target-list=$OUT/BBtargets.txt \
-                    --dump-policy=$OUT/policy_reach.txt \
-                    --dump-distance=$OUT/distance_reach.cfg.txt \
+                    --dump-policy=$OUT/policy.txt \
+                    --dump-distance=$OUT/distance.cfg.txt \
                     --dump-bid-mapping=$OUT/bid_loc_mapping.txt \
                     --dump-func-info=$OUT/function_info.txt \
                     --type-based-callgraph=1 \
                     --verbose=2 \
                     "${BC}" 2> ${IR_DIR}/${PREFIX}.log
-
-            mv $OUT/distance_reach.cfg.txt $OUT/distance.cfg.txt
-            mv $OUT/policy_reach.txt $OUT/policy.txt
             done
+            # generate instrumentation list for afl++
+            cat ${IR_DIR}/*_distance.txt | grep '^fun:'> ${IR_DIR}/afl_allow.txt || true
+            if [ ! -s "$IR_DIR/afl_allow.txt" ]; then
+                rm "$IR_DIR/afl_allow.txt"
+            fi
         )
     done
 }
@@ -128,6 +135,10 @@ build_afl() {(
 
     export AFL_LLVM_DICT2FILE="$OUT/afl++.dict"
     export AFL_LLVM_DICT2FILE_NO_MAIN="1"
+
+    if [[ -f "$IR_DIR/afl_allow.txt" ]]; then
+        export AFL_LLVM_ALLOWLIST="$IR_DIR/afl_allow.txt"
+    fi
 
     "$MAGMA/build.sh"
     "$TARGET/build.sh"
@@ -228,9 +239,7 @@ build_mr() {
         if [[ -z "$KO_NO_NATIVE_ZLIB" ]]; then
             OPTFLAGS="$OPTFLAGS -taint-abilist=${OBJ_PATH}/zlib_abilist.txt"
         fi
-        if [[ "$KO_SOLVE_UB" = 1 ]]; then
-            OPTFLAGS="$OPTFLAGS -taint-solve-ub=true"
-        fi
+        OPTFLAGS="$OPTFLAGS -taint-solve-ub=true -taint-trace-annotated-bb=true"
 
         if [ "php" = $TARGET_NAME ]; then
             OPTFLAGS="$OPTFLAGS -taint-abilist=${FUZZER}/src/icu.txt"
@@ -240,8 +249,8 @@ build_mr() {
             LIBS="$LIBS -licuio -licui18n -licuuc -licudata"
         elif [ "poppler" = $TARGET_NAME ]; then
             OPTFLAGS="$OPTFLAGS -taint-abilist=${FUZZER}/src/poppler.txt"
-            CXXFLAGS="$CXXFLAGS -fuse-ld=lld-${LLVM_VERSION}"
             LIBS="$LIBS -lbrotlidec -ljpeg -lz -lopenjp2 -lpng -ltiff -llcms2 -lm -lpthread -pthread"
+            export LDFLAGS="$LDFLAGS -no-pie"
         fi
 
         pushd $OUT

@@ -49,6 +49,12 @@ mkdir -p "$SHARED/findings"
 sleep 2s
 (
     ulimit -c 0
+    export SYMSAN_TARGET="$OUT/symsan/${PROGRAM}.taint"
+    export SYMSAN_SOLVE_UB=1
+    export SYMSAN_USE_JIGSAW=1
+    export SYMSAN_USE_NESTED=1
+    export SYMSAN_DONT_EXIT_ON_MEMERROR=1
+
     nohup timeout "$TIMEOUT" \
         python3 -u "$FUZZER/symsan/mazerunner/mazerunner.py" \
         -monitor_resource -a hybrid -n mazerunner \
@@ -57,6 +63,6 @@ sleep 2s
         -m reachability \
         -o "$SHARED/findings" \
         -s "$TARGET/BBtargets" \
-        $FUZZARGS -- "$OUT/symsan/$BUGID/$PROGRAM" $ARGS \
+        $FUZZARGS -- "$OUT/symsan/${PROGRAM}.taint" $ARGS \
         > "$SHARED/findings/mazerunner.log" 2>&1 &
 )
