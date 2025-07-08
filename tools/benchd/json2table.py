@@ -5,7 +5,7 @@ import csv
 import warnings
 from collections import defaultdict
 
-from survival_analysis import parse_args, get_time_to_bug, calc_survival, METRICS
+from survival_analysis import parse_args, get_time_to_bug, calc_survival, calc_median_survival, METRICS
 
 fuzzers = set()
 
@@ -42,9 +42,10 @@ def output_details(json_path, csv_path, num_trials, trial_length):
                 surv_ci_int = 'NA'
             
             # Calculate median for comparison
-            times = [t for t in ttb.get(metric, []) if t is not None]
-            if times:
-                med_time = int(statistics.median(times))
+            times = ttb.get(metric, [])
+            med_surv = calc_median_survival(times, trial_length)
+            if med_surv is not None:
+                med_time = int(med_surv)
             else:
                 med_time = 'T.O'
 

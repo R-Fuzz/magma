@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import List, Tuple
 import json
 import warnings
+import math
 
 from lifelines import KaplanMeierFitter
 from lifelines.utils import restricted_mean_survival_time as rmst
@@ -79,6 +80,21 @@ def calc_survival(data: List[int], trial_len: int) -> Tuple[float, float]:
                            sqrt(len(kmf.survival_function_)))
 
     return surv_time_mean, surv_time_ci
+
+
+def calc_median_survival(data: List[int], trial_len: int) -> float:
+    """Calculate the median survival time, considering censored data."""
+    times = list(data)
+    if not times or all(t is None for t in times):
+        return None
+    T = pd.Series([t if t is not None else trial_len for t in times])
+    E = pd.Series([t is not None for t in times])
+    kmf = KaplanMeierFitter()
+    kmf.fit(T, E)
+    median = kmf.median_survival_time_
+    if median is None or math.isinf(median):
+        return trial_len
+    return float(median)
 
 
 def main():
