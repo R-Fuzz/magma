@@ -18,15 +18,17 @@ def output_details(json_path, csv_path, num_trials, trial_length):
     # Ignore warnings
     warnings.simplefilter('ignore')
     
-    # Collect bug stats per fuzzer using survival analysis functions
+    # Collect bug stats per fuzzer; use "program/bug" as unique key
     fuzzer_stats = defaultdict(lambda: defaultdict(dict))
-    all_bugs = set()
+    all_prog_bugs = set()
     # Use get_time_to_bug function from survival_analysis.py
     for ttb in get_time_to_bug(data, num_trials):
         fuzzer = ttb['fuzzer']
         fuzzers.add(fuzzer)
         bug = ttb['bug']
-        all_bugs.add(bug)
+        program = ttb['program']
+        prog_bug = f"{program}/{bug}"
+        all_prog_bugs.add(prog_bug)
         
         # Do survival analysis for both reached and triggered
         stats = {}
@@ -54,10 +56,10 @@ def output_details(json_path, csv_path, num_trials, trial_length):
             stats[f'med_{metric}'] = med_time
             stats[f'count_{metric}'] = success_count
         
-        fuzzer_stats[fuzzer][bug] = stats
+        fuzzer_stats[fuzzer][prog_bug] = stats
 
     # Prepare CSV header
-    header = ['bug_id']
+    header = ['program_bug_id']
     for f in fuzzers:
         for metric in METRICS:
             header += [f'{f}_surv_{metric}', f'{f}_ci_{metric}', f'{f}_med_{metric}', f'{f}_count_{metric}']
@@ -66,10 +68,10 @@ def output_details(json_path, csv_path, num_trials, trial_length):
     with open(csv_path, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(header)
-        for bug in sorted(all_bugs):
-            row = [bug]
+        for prog_bug in sorted(all_prog_bugs):
+            row = [prog_bug]
             for f in fuzzers:
-                stats = fuzzer_stats.get(f, {}).get(bug, {})
+                stats = fuzzer_stats.get(f, {}).get(prog_bug, {})
                 for metric in METRICS:
                     row.append(stats.get(f'surv_{metric}', 'T.O'))
                     row.append(stats.get(f'ci_{metric}', 0))
