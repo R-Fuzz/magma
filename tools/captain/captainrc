@@ -10,7 +10,7 @@
 WORKDIR=./workdir
 
 # REPEAT: number of campaigns to run per program (per fuzzer)
-REPEAT=3
+REPEAT=10
 
 # [WORKER_MODE]: defines the type of CPU resources to allocate (default: 1)
 # - 1: logical cores (possibly SMT-enabled)
@@ -33,14 +33,14 @@ REPEAT=3
 TIMEOUT=24h
 
 # [POLL]: time (in seconds) between polls (default: 5)
-POLL=5
+POLL=1
 
 # [CACHE_ON_DISK]: if set, the cache workdir is mounted on disk instead of
 # in-memory (default: unset)
-# CACHE_ON_DISK=1
+CACHE_ON_DISK=1
 
 # [NO_ARCHIVE]: if set, campaign workdirs will not be tarballed (default: unset)
-# NO_ARCHIVE=1
+NO_ARCHIVE=1
 
 # [TMPFS_SIZE]: the size of the tmpfs mounted volume. This only applies when
 # CACHE_ON_DISK is not set (default: 50g)
@@ -63,20 +63,19 @@ POLL=5
 
 # [POC_EXTRACT]: if set, run the extract.sh script after the campaign is done
 # (default: unset)
-# POC_EXTRACT=1
-
+POC_EXTRACT=1
 
 ###
 ## Campaigns to run
 ###
 
 # FUZZERS: an array of fuzzer names (from magma/fuzzers/*) to evaluate
-FUZZERS=(afl aflfast moptafl aflplusplus fairfuzz honggfuzz)
+FUZZERS=(llm)
 
 # [fuzzer_TARGETS]: an array of target names (from magma/targets/*) to fuzz with
 # `fuzzer`. The `fuzzer` prefix is a fuzzer listed in the FUZZERS array
 # (default: all targets)
-# afl_TARGETS=(libpng libtiff libxml2)
+llm_TARGETS=( lua )
 
 # [fuzzer_target_PROGRAMS]: an array of program names (from
 # magma/targets/target/configrc) to use as execution drivers when fuzzing the
@@ -89,3 +88,9 @@ FUZZERS=(afl aflfast moptafl aflplusplus fairfuzz honggfuzz)
 
 # [fuzzer_CAMPAIGN_WORKERS]: overrides the global CAMPAIGN_WORKERS setting
 # afl_CAMPAIGN_WORKERS=3
+
+# set it to 1 to run campaigns one by one (default: run in parallel)
+RUN_SEQUENTIALLY=0
+# set the model name to testing LLM input generation
+# see https://github.com/sgzeng/MazeRunner/blob/main/mazerunner/llm.py#L15
+LLM_MODEL="gpt-4o"
