@@ -33,18 +33,8 @@ while read patch; do
     echo "Preparing env for $patch"
     NAME=${patch##*/}
     BUGID=${NAME%.patch}
-
     PROGRAM_PATH="$OUT/clang_bc/$(basename "$TARGET")/${PROGRAM}"
-    DISTANCE_FILE="$TARGET/BBtargets/${BUGID}/distance.cfg.txt"
-    POLICY_FILE="$TARGET/BBtargets/${BUGID}/policy.txt"
-    if [ ! -f "$DISTANCE_FILE" ] || [ ! -s "$DISTANCE_FILE" ]; then
-        echo "ERROR: $DISTANCE_FILE for $BUGID is missing or empty" >&2
-        continue
-    fi
-    if [ ! -f "$POLICY_FILE" ] || [ ! -s "$POLICY_FILE" ]; then
-        echo "ERROR: $POLICY_FILE for $BUGID is missing or empty" >&2
-        continue
-    fi
+
     if [ ! -f "$PROGRAM_PATH" ]; then
         echo "ERROR: Executable File $PROGRAM_PATH not found" >&2
         continue
