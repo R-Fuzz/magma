@@ -1,5 +1,5 @@
 #!/bin/bash
-set -xe
+set -e
 
 ##
 # Pre-requirements:
@@ -11,7 +11,7 @@ set -xe
 ##
 
 
-blacklist=("PNG002" "XML005" "XML007" "XML013" "XML014" "XML015")
+blacklist=("PNG002" "XML005" "XML007" "XML013" "XML014" "XML015" "PHP010")
 
 TARGET_NAME="$(basename $TARGET)"
 IR_DIR="${OUT}/clang_bc/${TARGET_NAME}"
@@ -57,6 +57,7 @@ build_bitcode() {(
 
 # static analysis
 static_analyze() {
+    set +e
 
     find "$TARGET/patches/bugs" -name "*.patch" | \
     while read patch; do
@@ -65,7 +66,7 @@ static_analyze() {
         BUG_ID=${NAME%.patch}
 
         if [[ " ${blacklist[@]} " =~ " ${BUG_ID} " ]]; then
-            echo "Skipping blacklisted BUG_ID: $BUG_ID"
+            echo "Skipping blacklisted BUG_ID: $BUG_ID" >&2
             continue
         fi
 
@@ -77,9 +78,12 @@ static_analyze() {
         (
             OUT="${TARGET}/BBtargets/${BUG_ID}"
             mkdir -p $OUT
-            grep "MAGMA_LOG(\"${BUG_ID}" "$SRC_DIR" -nR | \
+            if ! grep "MAGMA_LOG(\"${BUG_ID}" "$SRC_DIR" -nR | \
                 awk -F: '{print $1":"$2}' | sed 's/.*\///' \
-                > $OUT/BBtargets.txt
+                > $OUT/BBtargets.txt; then
+                echo "Error: Failed to find MAGMA_LOG for BUG_ID: $BUG_ID" >&2
+                continue
+            fi
 
             BCS=$(find ${IR_DIR} -name "*.0.0.preopt.bc")
             for BC in $BCS; do
@@ -91,7 +95,7 @@ static_analyze() {
                 fi
                 PROGRAM="$(basename ${BC%%.0*})"
                 PREFIX="${BUG_ID}_${PROGRAM}"
-                $FUZZER/kernel-analyzer/build/lib/KAMain \
+                if ! $FUZZER/kernel-analyzer/build/lib/KAMain \
                     --entry-list=${IR_DIR}/BBEntry.txt \
                     --target-list=$OUT/BBtargets.txt \
                     --dump-policy=$OUT/policy.txt \
@@ -100,7 +104,10 @@ static_analyze() {
                     --dump-func-info=$OUT/function_info.txt \
                     --type-based-callgraph=1 \
                     --verbose=2 \
-                    "${BC}" 2> ${IR_DIR}/${PREFIX}.log
+                    "${BC}" 2> ${IR_DIR}/${PREFIX}.log; then
+                    echo "Error: KAMain analysis failed for BUG_ID: $BUG_ID, PROGRAM: $PROGRAM" >&2
+                    continue
+                fi
             done
             # generate instrumentation list for afl++
             cat ${IR_DIR}/*_distance.txt | grep '^fun:'> ${IR_DIR}/afl_allow.txt || true
