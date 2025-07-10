@@ -4,11 +4,7 @@
 extern "C" {
 #endif
 
-#if defined(__x86_64__) || defined (__i386__)
-#include "arch/x86.h"
-#else
 #include "arch/noarch.h"
-#endif
 
 #define MAGMA_LOG(b,c) do{magma_log((b),(int)(c));}while(0)
 #define MAGMA_LOG_V(b,c) (magma_log((b),(int)(c)))
