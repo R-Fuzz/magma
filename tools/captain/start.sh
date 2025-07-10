@@ -66,11 +66,7 @@ else
     LLM_ENV=""
 fi
 
-ARGS="@@"
-argname="${PROGRAM}_ARGS"
-if [ ! -z "${!argname}" ]; then
-    ARGS="${!argname}"
-fi
+echo "Running $FUZZER/$TARGET/$PROGRAM/$BUGID with args <$ARGS>." >&2
 
 if [ -t 1 ]; then
     docker run -it $flag_volume \

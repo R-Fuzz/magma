@@ -11,7 +11,10 @@
 # - env FUZZARGS: extra arguments to pass to the fuzzer
 ##
 
-ARGS=${ARGS:-"@@"}
+# AFL++ fuzz driver uses a persistent loop and reads input from stdin only
+if nm "$OUT/afl/$PROGRAM" | grep -E '^[0-9a-f]+\s+[Ww]\s+main$'; then
+    ARGS="-"
+fi
 
 mkdir -p "$SHARED/findings"
 
