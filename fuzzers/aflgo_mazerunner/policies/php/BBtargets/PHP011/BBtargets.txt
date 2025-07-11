@@ -1,0 +1,3 @@
+exif.c:2081
+exif.c:2082
+exif.c:2083

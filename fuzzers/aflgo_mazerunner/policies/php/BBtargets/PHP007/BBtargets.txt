@@ -1,0 +1,5 @@
+phar.c:819
+phar.c:846
+phar.c:1061
+phar.c:1128
+phar.c:1140

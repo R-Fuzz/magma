@@ -1,0 +1,2 @@
+exif.c:3243
+exif.c.orig:3228

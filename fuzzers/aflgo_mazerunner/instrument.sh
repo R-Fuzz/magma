@@ -11,7 +11,12 @@ set -e
 ##
 
 
-blacklist=("PNG002" "XML005" "XML007" "XML013" "XML014" "XML015" "PHP010")
+blacklist=(
+  "PNG002" "XML005" "XML007" "XML013" "XML014" \
+  "XML015" "PHP005" "PHP008" "PHP010" "SSL002" \
+  "SSL004" "SSL005" "SSL008" "SSL011" "SSL012" \
+  "SSL014" "SSL017" "SSL018" "SSL019" "SSL020"
+)
 
 TARGET_NAME="$(basename $TARGET)"
 IR_DIR="${OUT}/clang_bc/${TARGET_NAME}"
@@ -56,19 +61,23 @@ build_bitcode() {(
 )}
 
 # static analysis
-static_analyze() {
+static_analyze() {(
     set +e
+
+    # Skip static analysis for php and openssl targets.
+    # These projects are large and analysis is very slow.
+    # Copy pre-analyzed BBtargets for faster build.
+    if [[ "$TARGET_NAME" == "php" || "$TARGET_NAME" == "openssl" ]]; then
+        echo "Skipping static analysis for $TARGET_NAME"
+        cp -r "$FUZZER/policies/$TARGET_NAME/BBtargets" "$TARGET/"
+        return
+    fi
 
     find "$TARGET/patches/bugs" -name "*.patch" | \
     while read patch; do
-        echo "Preparing env for $patch"
+        echo "Preparing static analysis env for $patch"
         NAME=${patch##*/}
         BUG_ID=${NAME%.patch}
-
-        if [[ " ${blacklist[@]} " =~ " ${BUG_ID} " ]]; then
-            echo "Skipping blacklisted BUG_ID: $BUG_ID" >&2
-            continue
-        fi
 
         SRC_DIR=$TARGET/repo/
         if [ "sqlite3" = $TARGET_NAME ]; then
@@ -116,10 +125,11 @@ static_analyze() {
             fi
         )
     done
-}
+)}
 
 # Build AFL++ instrumented version
 build_afl() {(
+    export OTHER_FUZZER=1
     export AFL_PATH="$FUZZER/aflpp"
     export CC="$FUZZER/aflpp/afl-clang-fast"
     export CXX="$FUZZER/aflpp/afl-clang-fast++"
@@ -152,9 +162,10 @@ build_afl() {(
 )}
 
 # build with AFLGo instrumented version
-build_aflgo() {
+build_aflgo() {(
+    export OTHER_FUZZER=1
     find "$TARGET/patches/bugs" -name "*.patch" | while read -r patch; do
-        echo "Preparing env for $patch"
+        echo "Preparing aflgo env for $patch"
         NAME=$(basename "$patch")
         BUG_ID="${NAME%.patch}"
 
@@ -175,8 +186,8 @@ build_aflgo() {
                 exit 1
             fi
 
-            export CFLAGS="$CFLAGS -O0 -g -distance=$DISTANCE_FILE"
-            export CXXFLAGS="$CXXFLAGS -O0 -g -distance=$DISTANCE_FILE"
+            export CFLAGS="$CFLAGS -distance=$DISTANCE_FILE"
+            export CXXFLAGS="$CXXFLAGS -distance=$DISTANCE_FILE"
 
             export BUG_DIR="$OUT/aflgo/${BUG_ID}"
             export LIBS="$LIBS -l:afl_driver.o -lstdc++"
@@ -198,13 +209,13 @@ build_aflgo() {
             fi
         )
     done
-}
+)}
 
 # build with MazeRunner instrumented version
-build_mr() {
+build_mr() {(
     find "$TARGET/patches/bugs" -name "*.patch" | \
     while read patch; do
-        echo "Preparing env for $patch"
+        echo "Preparing symsan env for $patch"
         NAME=${patch##*/}
         BUG_ID=${NAME%.patch}
 
@@ -296,7 +307,7 @@ build_mr() {
         popd
     )
     done
-}
+)}
 
 build_bitcode
 static_analyze
