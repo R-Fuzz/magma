@@ -81,6 +81,57 @@ get_next_cid()
 }
 export -f get_next_cid
 
+get_missing_campaigns()
+{
+    ##
+    # Pre-requirements:
+    # - $1: the directory where campaigns are stored
+    # - $2: the number of campaigns that should be completed
+    ##
+    local campaign_dir="$1"
+    local expected_count="$2"
+    
+    if [ ! -d "$campaign_dir" ]; then
+        # If directory doesn't exist, all campaigns are missing
+        echo "0"
+        return
+    fi
+    
+    shopt -s nullglob
+    campaigns=("$campaign_dir"/*)
+    shopt -u nullglob
+    
+    local actual_count=${#campaigns[@]}
+    
+    if [ $actual_count -eq 0 ]; then
+        # No campaigns exist, start from 0
+        echo "0"
+        return
+    fi
+    
+    # Get existing campaign numbers
+    local existing_campaigns=($(sort -n < <(basename -a "${campaigns[@]}")))
+    
+    # Find the first missing campaign number
+    for ((i=0; i<$expected_count; i++)); do
+        local found=0
+        for existing in "${existing_campaigns[@]}"; do
+            if [ "$existing" -eq "$i" ]; then
+                found=1
+                break
+            fi
+        done
+        if [ $found -eq 0 ]; then
+            echo "$i"
+            return
+        fi
+    done
+    
+    # If we reach here, all campaigns are completed
+    echo "completed"
+}
+export -f get_missing_campaigns
+
 mutex()
 {
     ##
@@ -305,8 +356,16 @@ for FUZZER in "${FUZZERS[@]}"; do
             if [[ "$FUZZER" == *mazerunner ]]; then
                 for BUGID in "${BUGIDS[@]}"; do
                     export BUGID
-                    echo_time "Starting campaigns. cmd=<$PROGRAM $ARGS>, bug=${BUGID}"
-                    for ((i=0; i<$REPEAT; i++)); do
+                    # Set campaign directories for this specific bug
+                    CAMPAIGN_ARDIR="$ARDIR/$FUZZER/$TARGET/$PROGRAM/$BUGID"
+                    # Check if campaigns are already completed for this bug
+                    missing_start=$(get_missing_campaigns "$CAMPAIGN_ARDIR" "$REPEAT")
+                    if [ "$missing_start" = "completed" ]; then
+                        echo_time "Campaigns already completed for $FUZZER/$TARGET/$PROGRAM/$BUGID. Skipping."
+                        continue
+                    fi
+                    echo_time "Starting campaigns. cmd=<$PROGRAM $ARGS>, bug=${BUGID}, starting from campaign $missing_start"
+                    for ((i=missing_start; i<$REPEAT; i++)); do
                         if [[ "$RUN_SEQUENTIALLY" == "1" ]]; then
                             unset NUMWORKERS
                             unset AFFINITY
@@ -319,8 +378,21 @@ for FUZZER in "${FUZZERS[@]}"; do
                     done
                 done
             else
-                echo_time "Starting campaigns for $PROGRAM $ARGS"
-                for ((i=0; i<$REPEAT; i++)); do
+                # Set campaign directories for this program
+                if [ -n "$LLM_MODEL" ]; then
+                    CAMPAIGN_ARDIR="$ARDIR/${FUZZER}_${LLM_MODEL}/$TARGET/$PROGRAM"
+                else
+                    CAMPAIGN_ARDIR="$ARDIR/$FUZZER/$TARGET/$PROGRAM"
+                fi
+                # Check if campaigns are already completed for this program
+                missing_start=$(get_missing_campaigns "$CAMPAIGN_ARDIR" "$REPEAT")
+                if [ "$missing_start" = "completed" ]; then
+                    echo_time "Campaigns already completed for $FUZZER/$TARGET/$PROGRAM. Skipping."
+                    continue
+                fi
+                
+                echo_time "Starting campaigns for $PROGRAM $ARGS, starting from campaign $missing_start"
+                for ((i=missing_start; i<$REPEAT; i++)); do
                     if [[ "$RUN_SEQUENTIALLY" == "1" ]]; then
                         unset NUMWORKERS
                         unset AFFINITY
