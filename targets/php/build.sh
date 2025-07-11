@@ -23,7 +23,10 @@ export EXTRA_CXXFLAGS="$CXXFLAGS -fno-sanitize=object-size"
 
 OLD_CFLAGS=$CFLAGS
 unset CFLAGS
-#unset CXXFLAGS
+# We are building with other afl based fuzzer, apply the original version
+if [ -n "$OTHER_FUZZER" ]; then
+    unset CXXFLAGS
+fi
 
 #build the php library
 ./buildconf
@@ -43,13 +46,18 @@ LIB_FUZZING_ENGINE="-Wall" ./configure \
 make -j$(nproc) clean
 
 # build oniguruma and link statically
-export CFLAGS=$OLD_CFLAGS
+if [ ! -n "$OTHER_FUZZER" ]; then
+    export CFLAGS=$OLD_CFLAGS
+fi
+
 pushd oniguruma
 autoreconf -vfi
 ./configure --disable-shared
 make -j$(nproc)
 popd
-unset CFLAGS
+if [ ! -n "$OTHER_FUZZER" ]; then
+    unset CFLAGS
+fi
 
 make -j$(nproc)
 
