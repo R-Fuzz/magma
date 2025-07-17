@@ -50,17 +50,34 @@ if [[ -z "${DOCKERFILE_PATH:-}" ]]; then
     DOCKERFILE_PATH="$MAGMA/docker/Dockerfile"
 fi
 
+github_token_flag=""
+if [[ ! -z $GITHUB_TOKEN ]]; then
+    github_token_flag="--build-arg GITHUB_TOKEN=${GITHUB_TOKEN}"
+fi
+
+google_api_flag=""
+if [[ ! -z $GOOGLE_API_KEY ]]; then
+    google_api_flag="--build-arg GOOGLE_API_KEY=${GOOGLE_API_KEY}"
+fi
+
+openai_api_flag=""
+if [[ ! -z $OPENAI_API_KEY ]]; then
+    openai_api_flag="--build-arg OPENAI_API_KEY=${OPENAI_API_KEY}"
+fi
+
+anthropic_api_flag=""
+if [[ ! -z $ANTHROPIC_API_KEY ]]; then
+    anthropic_api_flag="--build-arg ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}"
+fi
+
 set -x
 if [[ "$FUZZER" == *llm* || "$FUZZER" == *mazerunner ]]; then
     docker build -t "$IMG_NAME" \
-        --build-arg GITHUB_TOKEN="$GITHUB_TOKEN" \
-        --build-arg GOOGLE_API_KEY="$GOOGLE_API_KEY" \
-        --build-arg OPENAI_API_KEY="$OPENAI_API_KEY" \
-        --build-arg ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
         --build-arg fuzzer_name="$FUZZER" \
         --build-arg target_name="$TARGET" \
         --build-arg USER_ID=$USER_ID \
         --build-arg GROUP_ID=$GROUP_ID \
+        $github_token_flag $google_api_flag $openai_api_flag $anthropic_api_flag \
         $mode_flag $isan_flag $harden_flag \
         -f "$DOCKERFILE_PATH" "$MAGMA"
 else
