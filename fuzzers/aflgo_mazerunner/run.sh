@@ -13,16 +13,12 @@
 # - env COMMIT: git commit hash of mazerunner
 ##
 
-
-pushd "$FUZZER/symsan"
+cd "$FUZZER/symsan"
 if [ -n "$COMMIT" ]; then
     git fetch
     git reset --hard origin/main
     git checkout "$COMMIT"
 fi
-popd
-
-mkdir -p "$SHARED/findings"
 
 # Check if SymSan binary uses LLVMFuzzerTestOneInput or original main
 if nm "$OUT/symsan/${PROGRAM}.taint" | grep -E '^[0-9a-f]+\s+[Ww]\s+main$' > /dev/null; then
@@ -32,6 +28,15 @@ else
     # Binary has strong main function - original program, keep original ARGS
     SYMSAN_ARGS="$ARGS"
 fi
+
+cd "$TARGET/BBtargets/${BUGID}"
+cp ${PROGRAM}_policy.txt policy.txt
+cp ${PROGRAM}_distance.cfg.txt distance.cfg.txt
+cp ${PROGRAM}_bid_loc_mapping.txt bid_loc_mapping.txt
+cp ${PROGRAM}_function_info.txt function_info.txt
+
+mkdir -p "$SHARED/findings"
+cd "$SHARED/findings"
 
 # Start AFLGo fuzzer
 (
@@ -74,7 +79,7 @@ sleep 2s
         -i /magma/targets/libpng/corpus/libpng_read_fuzzer \
         -m reachability \
         -o "$SHARED/findings" \
-        -s "$TARGET/BBtargets" \
+        -s "$TARGET/BBtargets/${BUGID}" \
         $FUZZARGS -- "$OUT/symsan/${PROGRAM}.taint" $SYMSAN_ARGS \
         > "$SHARED/findings/mazerunner.log" 2>&1 &
 )

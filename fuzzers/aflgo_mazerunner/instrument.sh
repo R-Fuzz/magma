@@ -107,10 +107,11 @@ static_analyze() {(
                 if ! $FUZZER/kernel-analyzer/build/lib/KAMain \
                     --entry-list=${IR_DIR}/BBEntry.txt \
                     --target-list=$OUT/BBtargets.txt \
-                    --dump-policy=$OUT/policy.txt \
-                    --dump-distance=$OUT/distance.cfg.txt \
-                    --dump-bid-mapping=$OUT/bid_loc_mapping.txt \
-                    --dump-func-info=$OUT/function_info.txt \
+                    --dump-policy=$OUT/${PROGRAM}_policy.txt \
+                    --dump-distance=$OUT/${PROGRAM}_distance.cfg.txt \
+                    --dump-bid-mapping=$OUT/${PROGRAM}_bid_loc_mapping.txt \
+                    --dump-func-info=$OUT/${PROGRAM}_function_info.txt \
+                    --dump-annotated-ir="_distance.bc" \
                     --type-based-callgraph=1 \
                     --verbose=2 \
                     "${BC}" 2> ${IR_DIR}/${PREFIX}.log; then
@@ -118,13 +119,15 @@ static_analyze() {(
                     continue
                 fi
             done
-            # generate instrumentation list for afl++
-            cat ${IR_DIR}/*_distance.txt | grep '^fun:'> ${IR_DIR}/afl_allow.txt || true
-            if [ ! -s "$IR_DIR/afl_allow.txt" ]; then
-                rm "$IR_DIR/afl_allow.txt"
-            fi
         )
     done
+    # generate instrumentation list for afl++
+    cat ${OUT}/*_distance.cfg.txt | grep '^fun:' >> ${IR_DIR}/afl_allow.txt || true
+    if [ -s "${IR_DIR}/afl_allow.txt" ]; then
+        sort -u "${IR_DIR}/afl_allow.txt" -o "${IR_DIR}/afl_allow.txt"
+    else
+        rm "$IR_DIR/afl_allow.txt"
+    fi
 )}
 
 # Build AFL++ instrumented version
@@ -174,40 +177,45 @@ build_aflgo() {(
             continue
         fi
 
-        (
             export AFL_CXX=clang++-12
             export AFL_CC=clang-12
             export CC="$FUZZER/aflgo/instrument/afl-clang-fast"
             export CXX="$FUZZER/aflgo/instrument/afl-clang-fast++"
 
-            DISTANCE_FILE="${TARGET}/BBtargets/${BUG_ID}/distance.cfg.txt"
-            if [[ ! -f "$DISTANCE_FILE" ]]; then
-                echo "Warning: distance file not found for $BUG_ID"
-                exit 1
-            fi
+        BCS=$(find ${IR_DIR} -name "*.0.0.preopt.bc")
+        for BC in $BCS; do
+            # Run inside a subshell to set CFLAGS/CXXFLAGS properly
+            (
+                PROGRAM="$(basename ${BC%%.0*})"
+                DISTANCE_FILE="${TARGET}/BBtargets/${BUG_ID}/${PROGRAM}_distance.cfg.txt"
+                if [[ ! -f "$DISTANCE_FILE" ]]; then
+                    echo "Warning: distance file not found for $PROGRAM $BUG_ID"
+                    continue
+                fi
 
-            export CFLAGS="$CFLAGS -distance=$DISTANCE_FILE"
-            export CXXFLAGS="$CXXFLAGS -distance=$DISTANCE_FILE"
+                export CFLAGS="$CFLAGS -distance=$DISTANCE_FILE"
+                export CXXFLAGS="$CXXFLAGS -distance=$DISTANCE_FILE"
 
-            export BUG_DIR="$OUT/aflgo/${BUG_ID}"
-            export LIBS="$LIBS -l:afl_driver.o -lstdc++"
-            export LDFLAGS="-L${OUT}/aflgo -L${BUG_DIR} -g"
-            export OUT="$BUG_DIR"
+                export BUG_DIR="$OUT/aflgo/${BUG_ID}"
+                export LIBS="$LIBS -l:afl_driver.o -lstdc++"
+                export LDFLAGS="-L${OUT}/aflgo -L${BUG_DIR} -g"
+                export OUT="$BUG_DIR"
 
-            mkdir -p "$OUT"
+                mkdir -p "$OUT"
 
-            echo "Building MAGMA for $BUG_ID..."
-            if ! "$MAGMA/build.sh"; then
-                echo "MAGMA build failed for $BUG_ID"
-                exit 1
-            fi
+                echo "Building MAGMA for $BUG_ID..."
+                if ! "$MAGMA/build.sh"; then
+                    echo "MAGMA build failed for $BUG_ID"
+                    exit 1
+                fi
 
-            echo "Building TARGET for $BUG_ID..."
-            if ! "$TARGET/build.sh"; then
-                echo "TARGET build failed for $BUG_ID"
-                exit 1
-            fi
-        )
+                echo "Building TARGET for $BUG_ID..."
+                if ! "$TARGET/build.sh"; then
+                    echo "TARGET $PROGRAM build failed for $BUG_ID"
+                    exit 1
+                fi
+            )
+        done
     done
 )}
 
@@ -282,13 +290,17 @@ build_mr() {(
             if [[ -f ${BC}_distance.bc ]]; then
                 BC=${BC}_distance.bc
             fi
-
+            DISTANCE_FILE="${AFLGO_TARGET_DIR}/${PROGRAM}_distance.cfg.txt"
+            if [[ ! -s "$DISTANCE_FILE" ]]; then
+                echo "Warning: distance file not found for $PROGRAM $BUG_ID"
+                continue
+            fi
             # instrument symsan taint pass and distance pass
             opt-${LLVM_VERSION} \
             -load="${OBJ_PATH}/TaintPass.so" \
             -load="${OBJ_PATH}/libAFLGOPass.so" \
             -enable-new-pm=0 \
-            -distance=${AFLGO_TARGET_DIR}/distance.cfg.txt \
+            -distance=$DISTANCE_FILE \
             -outdir=${AFLGO_TARGET_DIR} \
             $OPTFLAGS -o $IBC $BC
 
