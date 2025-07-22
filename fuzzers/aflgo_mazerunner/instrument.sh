@@ -111,7 +111,6 @@ static_analyze() {(
                     --dump-distance=$OUT/${PROGRAM}_distance.cfg.txt \
                     --dump-bid-mapping=$OUT/${PROGRAM}_bid_loc_mapping.txt \
                     --dump-func-info=$OUT/${PROGRAM}_function_info.txt \
-                    --dump-annotated-ir="_distance.bc" \
                     --type-based-callgraph=1 \
                     --verbose=2 \
                     "${BC}" 2> ${IR_DIR}/${PREFIX}.log; then
@@ -119,10 +118,10 @@ static_analyze() {(
                     continue
                 fi
             done
+            # generate instrumentation list for afl++
+            cat ${OUT}/*_distance.cfg.txt | grep '^fun:' >> ${IR_DIR}/afl_allow.txt || true
         )
     done
-    # generate instrumentation list for afl++
-    cat ${OUT}/*_distance.cfg.txt | grep '^fun:' >> ${IR_DIR}/afl_allow.txt || true
     if [ -s "${IR_DIR}/afl_allow.txt" ]; then
         sort -u "${IR_DIR}/afl_allow.txt" -o "${IR_DIR}/afl_allow.txt"
     else
@@ -244,8 +243,8 @@ build_mr() {(
         unset AFLGO_PREPROCESSING
 
         export LDFLAGS="$LDFLAGS -L$OUT/symsan"
-        export FUZZER_LIB="$OUT/libfuzzer-harness-fast.o"
         export OUT="$OUT/symsan/${BUG_ID}"
+        export FUZZER_LIB="$OUT/libfuzzer-harness-fast.o"
         export LDFLAGS="$LDFLAGS -L$OUT"
         
         $CC $CFLAGS -c -fPIC -o $FUZZER_LIB $FUZZER/symsan/driver/harness-proxy.c
@@ -297,12 +296,15 @@ build_mr() {(
             fi
             # instrument symsan taint pass and distance pass
             opt-${LLVM_VERSION} \
-            -load="${OBJ_PATH}/TaintPass.so" \
-            -load="${OBJ_PATH}/libAFLGOPass.so" \
-            -enable-new-pm=0 \
+            -load "${OBJ_PATH}/TaintPass.so" \
+            -load "${OBJ_PATH}/libAFLGOPass.so" \
+            -load-pass-plugin="${OBJ_PATH}/TaintPass.so" \
+            -load-pass-plugin="${OBJ_PATH}/libAFLGOPass.so" \
             -distance=$DISTANCE_FILE \
             -outdir=${AFLGO_TARGET_DIR} \
-            $OPTFLAGS -o $IBC $BC
+            $OPTFLAGS \
+            -passes=taint,aflgo-coverage \
+            -o $IBC $BC
 
             # compile to object file
             llc-${LLVM_VERSION} -filetype=obj --relocation-model=pic -o $IOBJ $IBC
