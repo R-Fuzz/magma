@@ -207,7 +207,7 @@ build_symsan() {(
     if [[ -z "$KO_NO_NATIVE_ZLIB" ]]; then
         OPTFLAGS="$OPTFLAGS -taint-abilist=${OBJ_PATH}/zlib_abilist.txt"
     fi
-    OPTFLAGS="$OPTFLAGS -taint-solve-ub=true -taint-trace-annotated-bb=true"
+    OPTFLAGS="$OPTFLAGS -taint-solve-ub=true"
 
     if [ "php" = $TARGET_NAME ]; then
         OPTFLAGS="$OPTFLAGS -taint-abilist=${FUZZER}/src/icu.txt"

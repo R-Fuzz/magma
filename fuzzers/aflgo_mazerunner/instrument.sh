@@ -111,6 +111,7 @@ static_analyze() {(
                     --dump-distance=$OUT/${PROGRAM}_distance.cfg.txt \
                     --dump-bid-mapping=$OUT/${PROGRAM}_bid_loc_mapping.txt \
                     --dump-func-info=$OUT/${PROGRAM}_function_info.txt \
+                    --dump-annotated-ir="_distance.bc" \
                     --type-based-callgraph=1 \
                     --verbose=2 \
                     "${BC}" 2> ${IR_DIR}/${PREFIX}.log; then
@@ -264,7 +265,7 @@ build_mr() {(
         if [[ -z "$KO_NO_NATIVE_ZLIB" ]]; then
             OPTFLAGS="$OPTFLAGS -taint-abilist=${OBJ_PATH}/zlib_abilist.txt"
         fi
-        OPTFLAGS="$OPTFLAGS -taint-solve-ub=true -taint-trace-annotated-bb=true"
+        OPTFLAGS="$OPTFLAGS -taint-solve-ub=true"
 
         if [ "php" = $TARGET_NAME ]; then
             OPTFLAGS="$OPTFLAGS -taint-abilist=${FUZZER}/src/icu.txt"
