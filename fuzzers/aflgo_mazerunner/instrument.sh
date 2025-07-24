@@ -111,7 +111,7 @@ static_analyze() {(
                     --dump-distance=$OUT/${PROGRAM}_distance.cfg.txt \
                     --dump-bid-mapping=$OUT/${PROGRAM}_bid_loc_mapping.txt \
                     --dump-func-info=$OUT/${PROGRAM}_function_info.txt \
-                    --call-stack-len=10 \
+                    --call-stack-len=15 \
                     --dump-annotated-ir="_distance.bc" \
                     --type-based-callgraph=1 \
                     --verbose=2 \
@@ -183,6 +183,8 @@ build_aflgo() {(
         export CC="$FUZZER/aflgo/instrument/afl-clang-fast"
         export CXX="$FUZZER/aflgo/instrument/afl-clang-fast++"
 
+        CFLAGS_ORI=$CFLAGS
+        CXXFLAGS_ORI=$CXXFLAGS
         # Run inside a subshell to set CFLAGS/CXXFLAGS properly
         (
             BCS=$(find ${IR_DIR} -name "*.0.0.preopt.bc")
@@ -194,8 +196,8 @@ build_aflgo() {(
                     continue
                 fi
 
-                export CFLAGS="$CFLAGS -distance=$DISTANCE_FILE"
-                export CXXFLAGS="$CXXFLAGS -distance=$DISTANCE_FILE"
+                export CFLAGS="$CFLAGS_ORI -distance=$DISTANCE_FILE"
+                export CXXFLAGS="$CXXFLAGS_ORI -distance=$DISTANCE_FILE"
 
                 export BUG_DIR="$OUT/aflgo/${BUG_ID}"
                 export LIBS="$LIBS -l:afl_driver.o -lstdc++"
@@ -249,6 +251,7 @@ build_mr() {(
         export FUZZER_LIB="$OUT/libfuzzer-harness-fast.o"
         export LDFLAGS="$LDFLAGS -L$OUT"
         
+        mkdir -p $OUT
         $CC $CFLAGS -c -fPIC -o $FUZZER_LIB $FUZZER/symsan/driver/harness-proxy.c
 
         ZLIB_TARGETS=(libpng libtiff)
@@ -258,7 +261,6 @@ build_mr() {(
             unset KO_NO_NATIVE_ZLIB
         fi
 
-        mkdir -p $OUT
         "$MAGMA/build.sh"
 
         OBJ_PATH="$FUZZER/symsan/build/lib/symsan"
