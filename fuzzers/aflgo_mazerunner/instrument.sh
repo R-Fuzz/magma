@@ -10,7 +10,7 @@ set -e
 # - env CFLAGS and CXXFLAGS must be set to link against Magma instrumentation
 ##
 
-
+SKIP_STATIC_ANALYSIS=0
 blacklist=(
   "PNG002" "XML005" "XML007" "XML013" "XML014" \
   "XML015" "PHP005" "PHP008" "PHP010" "SSL002" \
@@ -67,7 +67,7 @@ static_analyze() {(
     # Skip static analysis for php and openssl targets.
     # These projects are large and analysis is very slow.
     # Copy pre-analyzed BBtargets for faster build.
-    if [[ "$TARGET_NAME" == "php" || "$TARGET_NAME" == "openssl" ]]; then
+    if [[ $SKIP_STATIC_ANALYSIS -eq 1 ]]; then
         echo "Skipping static analysis for $TARGET_NAME"
         cp -r "$FUZZER/policies/$TARGET_NAME/BBtargets" "$TARGET/"
         return
@@ -111,6 +111,7 @@ static_analyze() {(
                     --dump-distance=$OUT/${PROGRAM}_distance.cfg.txt \
                     --dump-bid-mapping=$OUT/${PROGRAM}_bid_loc_mapping.txt \
                     --dump-func-info=$OUT/${PROGRAM}_function_info.txt \
+                    --call-stack-len=10 \
                     --dump-annotated-ir="_distance.bc" \
                     --type-based-callgraph=1 \
                     --verbose=2 \
@@ -177,15 +178,15 @@ build_aflgo() {(
             continue
         fi
 
-            export AFL_CXX=clang++-12
-            export AFL_CC=clang-12
-            export CC="$FUZZER/aflgo/instrument/afl-clang-fast"
-            export CXX="$FUZZER/aflgo/instrument/afl-clang-fast++"
+        export AFL_CXX=clang++-12
+        export AFL_CC=clang-12
+        export CC="$FUZZER/aflgo/instrument/afl-clang-fast"
+        export CXX="$FUZZER/aflgo/instrument/afl-clang-fast++"
 
-        BCS=$(find ${IR_DIR} -name "*.0.0.preopt.bc")
-        for BC in $BCS; do
-            # Run inside a subshell to set CFLAGS/CXXFLAGS properly
-            (
+        # Run inside a subshell to set CFLAGS/CXXFLAGS properly
+        (
+            BCS=$(find ${IR_DIR} -name "*.0.0.preopt.bc")
+            for BC in $BCS; do
                 PROGRAM="$(basename ${BC%%.0*})"
                 DISTANCE_FILE="${TARGET}/BBtargets/${BUG_ID}/${PROGRAM}_distance.cfg.txt"
                 if [[ ! -f "$DISTANCE_FILE" ]]; then
@@ -214,8 +215,8 @@ build_aflgo() {(
                     echo "TARGET $PROGRAM build failed for $BUG_ID"
                     exit 1
                 fi
-            )
-        done
+            done
+        )
     done
 )}
 
@@ -231,7 +232,7 @@ build_mr() {(
             echo "Skipping blacklisted BUG_ID: $BUG_ID"
             continue
         fi
-        (
+    (
         export KO_CXX=clang++-${LLVM_VERSION}
         export KO_CC=clang-${LLVM_VERSION}
         export CXX="$FUZZER/symsan/build/bin/ko-clang++"
