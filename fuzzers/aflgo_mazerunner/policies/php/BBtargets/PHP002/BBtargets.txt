@@ -1,2 +1,0 @@
-exif.c:4105
-exif.c.orig:4090

@@ -1,2 +1,0 @@
-a_type.c:108
-a_type.c.orig:104
