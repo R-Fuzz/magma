@@ -58,8 +58,7 @@ ARG fuzzer_name
 ARG fuzzer_path=fuzzers/${fuzzer_name}
 ENV FUZZER=${MAGMA_R}/${fuzzer_path}
 USER root:root
-COPY --chown=magma:magma ${magma_root}/${fuzzer_path} ${FUZZER}
-RUN chown -R magma:magma ${FUZZER}
+RUN mkdir -p ${FUZZER} && chown -R magma:magma ${FUZZER}
 
 # Install fuzzer dependencies
 COPY --chown=magma:magma ${magma_root}/${fuzzer_path}/preinstall.sh ${FUZZER}
@@ -119,7 +118,8 @@ ENV LIBS="-l:magma.a -lrt"
 ENV LDFLAGS="-L${OUT} -g"
 
 # Instrument and build the target program
-COPY --chown=magma:magma ${magma_root}/${fuzzer_path} ${FUZZER}
+COPY --chown=magma:magma ${magma_root}/${fuzzer_path}/pre-built ${FUZZER}/pre-built
+COPY --chown=magma:magma ${magma_root}/${fuzzer_path}/instrument.sh ${FUZZER}
 COPY --chown=magma:magma ${magma_root}/${magma_path}/build.sh ${MAGMA}
 COPY --chown=magma:magma ${magma_root}/${target_path}/build.sh ${TARGET}
 RUN ${FUZZER}/instrument.sh

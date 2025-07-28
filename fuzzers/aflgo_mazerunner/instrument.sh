@@ -10,12 +10,17 @@ set -e
 # - env CFLAGS and CXXFLAGS must be set to link against Magma instrumentation
 ##
 
-SKIP_STATIC_ANALYSIS=0
+SKIP_STATIC_ANALYSIS=1
 blacklist=(
-  "PNG002" "XML005" "XML007" "XML013" "XML014" \
-  "XML015" "PHP005" "PHP008" "PHP010" "SSL002" \
-  "SSL004" "SSL005" "SSL008" "SSL011" "SSL012" \
-  "SSL014" "SSL017" "SSL018" "SSL019" "SSL020"
+    "PNG002"                                     \
+    "PHP005" "PHP008" "SQL004" "SQL005" "SQL008" \
+    "SND006" "SND007" "SND024" "SSL002" "SSL004" \
+    "SSL005" "SSL008" "SSL009" "SSL011" "SSL012" \
+    "SSL014" "SSL015" "SSL017" "SSL018" "SSL019" \
+    "SSL020" "XML004" "XML005" "XML007" "XML013" \
+    "XML014" "XML015" "XML016" "PDF001" "PDF003" \
+    "PDF004" "PDF006" "PDF010" "PDF013" "PDF015" \
+    "PDF017" "PDF020" "TIF004" "TIF011" "TIF013"
 )
 
 TARGET_NAME="$(basename $TARGET)"
@@ -69,7 +74,9 @@ static_analyze() {(
     # Copy pre-analyzed BBtargets for faster build.
     if [[ $SKIP_STATIC_ANALYSIS -eq 1 ]]; then
         echo "Skipping static analysis for $TARGET_NAME"
-        cp -r "$FUZZER/policies/$TARGET_NAME/BBtargets" "$TARGET/"
+        cp -r "$FUZZER/pre-built/$TARGET_NAME/BBtargets" "$TARGET/"
+        rm -rf "$OUT/clang_bc/*"
+        cp -r "$FUZZER/pre-built/${TARGET_NAME}/clang_bc" "$OUT/"
         return
     fi
 
@@ -114,7 +121,6 @@ static_analyze() {(
                     --call-stack-len=15 \
                     --dump-annotated-ir="_distance.bc" \
                     --type-based-callgraph=1 \
-                    --verbose=2 \
                     "${BC}" 2> ${IR_DIR}/${PREFIX}.log; then
                     echo "Error: KAMain analysis failed for BUG_ID: $BUG_ID, PROGRAM: $PROGRAM" >&2
                     continue
@@ -185,6 +191,8 @@ build_aflgo() {(
 
         CFLAGS_ORI=$CFLAGS
         CXXFLAGS_ORI=$CXXFLAGS
+        LIBS_ORI=$LIBS
+        OUT_ORI=$OUT
         # Run inside a subshell to set CFLAGS/CXXFLAGS properly
         (
             BCS=$(find ${IR_DIR} -name "*.0.0.preopt.bc")
@@ -199,9 +207,9 @@ build_aflgo() {(
                 export CFLAGS="$CFLAGS_ORI -distance=$DISTANCE_FILE"
                 export CXXFLAGS="$CXXFLAGS_ORI -distance=$DISTANCE_FILE"
 
-                export BUG_DIR="$OUT/aflgo/${BUG_ID}"
-                export LIBS="$LIBS -l:afl_driver.o -lstdc++"
-                export LDFLAGS="-L${OUT}/aflgo -L${BUG_DIR} -g"
+                export BUG_DIR="$OUT_ORI/aflgo/${BUG_ID}"
+                export LIBS="$LIBS_ORI -l:afl_driver.o -lstdc++"
+                export LDFLAGS="-L${OUT_ORI}/aflgo -L${BUG_DIR} -g"
                 export OUT="$BUG_DIR"
 
                 mkdir -p "$OUT"
