@@ -10,7 +10,8 @@ set -e
 # - env CFLAGS and CXXFLAGS must be set to link against Magma instrumentation
 ##
 
-SKIP_STATIC_ANALYSIS=1
+SKIP_STATIC_ANALYSIS=0
+REUSE_PREBUILT_BC=1
 blacklist=(
     "PNG002"                                     \
     "PHP005" "PHP008" "SQL004" "SQL005" "SQL008" \
@@ -70,14 +71,20 @@ static_analyze() {(
     set +e
 
     # Skip static analysis for php and openssl targets.
-    # These projects are large and analysis is very slow.
-    # Copy pre-analyzed BBtargets for faster build.
+    # Some projects are large and analysis is slow.
+    # Copy pre-analyzed BBtargets for faster image build.
     if [[ $SKIP_STATIC_ANALYSIS -eq 1 ]]; then
         echo "Skipping static analysis for $TARGET_NAME"
         cp -r "$FUZZER/pre-built/$TARGET_NAME/BBtargets" "$TARGET/"
         rm -rf "$OUT/clang_bc/*"
         cp -r "$FUZZER/pre-built/${TARGET_NAME}/clang_bc" "$OUT/"
         return
+    fi
+    # Reuse pre-built clang bitcode files for consistent analysis results.
+    if [[ $REUSE_PREBUILT_BC -eq 1 ]]; then
+        echo "Reusing pre-built BBtargets for $TARGET_NAME"
+        rm -rf "$OUT/clang_bc/*"
+        cp -r "$FUZZER/pre-built/${TARGET_NAME}/clang_bc" "$OUT/"
     fi
 
     find "$TARGET/patches/bugs" -name "*.patch" | \
@@ -86,6 +93,11 @@ static_analyze() {(
         NAME=${patch##*/}
         BUG_ID=${NAME%.patch}
 
+        if [[ " ${blacklist[*]} " =~ " ${BUG_ID} " ]]; then
+            echo "Skipping blacklisted BUG_ID: $BUG_ID"
+            continue
+        fi
+        
         SRC_DIR=$TARGET/repo/
         if [ "sqlite3" = $TARGET_NAME ]; then
             SRC_DIR=$TARGET/work/
@@ -93,6 +105,7 @@ static_analyze() {(
 
         (
             OUT="${TARGET}/BBtargets/${BUG_ID}"
+            rm -rf $OUT || true
             mkdir -p $OUT
             if ! grep "MAGMA_LOG(\"${BUG_ID}" "$SRC_DIR" -nR | \
                 awk -F: '{print $1":"$2}' | sed 's/.*\///' \
@@ -111,6 +124,7 @@ static_analyze() {(
                 fi
                 PROGRAM="$(basename ${BC%%.0*})"
                 PREFIX="${BUG_ID}_${PROGRAM}"
+                rm "${BC}_${BUG_ID}.bc" || true
                 if ! $FUZZER/kernel-analyzer/build/lib/KAMain \
                     --entry-list=${IR_DIR}/BBEntry.txt \
                     --target-list=$OUT/BBtargets.txt \
@@ -118,8 +132,9 @@ static_analyze() {(
                     --dump-distance=$OUT/${PROGRAM}_distance.cfg.txt \
                     --dump-bid-mapping=$OUT/${PROGRAM}_bid_loc_mapping.txt \
                     --dump-func-info=$OUT/${PROGRAM}_function_info.txt \
+                    --dump-critical-branch=$OUT/${PROGRAM}_critical_BBs.txt \
                     --call-stack-len=15 \
-                    --dump-annotated-ir="_distance.bc" \
+                    --dump-annotated-ir="_${BUG_ID}.bc" \
                     --type-based-callgraph=1 \
                     "${BC}" 2> ${IR_DIR}/${PREFIX}.log; then
                     echo "Error: KAMain analysis failed for BUG_ID: $BUG_ID, PROGRAM: $PROGRAM" >&2
@@ -298,8 +313,8 @@ build_mr() {(
             IBC="${PROGRAM}.taint.bc"
             IOBJ="${PROGRAM}.taint.o"
 
-            if [[ -f ${BC}_distance.bc ]]; then
-                BC=${BC}_distance.bc
+            if [[ -f "${BC}_${BUG_ID}.bc" ]]; then
+                BC="${BC}_${BUG_ID}.bc"
             fi
             DISTANCE_FILE="${AFLGO_TARGET_DIR}/${PROGRAM}_distance.cfg.txt"
             if [[ ! -s "$DISTANCE_FILE" ]]; then
@@ -335,7 +350,9 @@ build_mr() {(
     done
 )}
 
-build_bitcode
+if [[ $REUSE_PREBUILT_BC -eq 0 ]]; then
+    build_bitcode
+fi
 static_analyze
 # build_afl
 build_aflgo
