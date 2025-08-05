@@ -9,7 +9,7 @@ RUN DEBIAN_FRONTEND=noninteractive \
 ## Magma directory hierarchy
 # magma_root is relative to the docker-build's working directory
 # The Docker image must be built in the root of the magma directory
-ARG magma_root=./
+ARG magma_root=.
 
 ## Path variables inside the container
 ENV MAGMA_R=/magma

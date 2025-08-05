@@ -10,6 +10,8 @@
 # - env ARGS: extra arguments to pass to the program
 # - env COMMIT: git commit hash of mazerunner
 # - env LLM_MODEL: name of the LLM model to use
+# - env ROUND: experiment round number
+# - env BUGID: ID of the bug under $PROGRAM
 ##
 
 ARGS=${ARGS:-"@@"}
@@ -31,6 +33,16 @@ while read patch; do
     NAME=${patch##*/}
     BUGID=${NAME%.patch}
 
+    GEN_CODE_FILE=$(find "$FUZZER/llm_response/$PROGRAM" -maxdepth 1 -type f -name "${BUGID}_${LLM_MODEL}*${ROUND}.txt" 2>/dev/null | head -n 1)
+    if [ -n "$GEN_CODE_FILE" ]; then
+        echo "Found LLM produced generator $GEN_CODE_FILE"
+        PRE_BUILT_FLAG="-code ${GEN_CODE_FILE}"
+    else
+        echo "No pre-produced GEN_CODE_FILE for $PROGRAM,$BUGID,$LLM_MODEL,$ROUND"
+        PRE_BUILT_FLAG=""
+        # continue
+    fi
+    
     pushd "$TARGET/BBtargets/${BUGID}"
     cp ${PROGRAM}_policy.txt policy.txt
     cp ${PROGRAM}_distance.cfg.txt distance.cfg.txt
@@ -51,6 +63,7 @@ while read patch; do
         -m "$LLM_MODEL" \
         -l prompt_${BUGID}.log \
         -info ${BUGID} \
+        $PRE_BUILT_FLAG \
         -- "$PROGRAM_PATH" $ARGS
 
     LLM_FILE="$SHARED/findings/llm_${BUGID}"

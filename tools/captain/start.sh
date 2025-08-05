@@ -61,7 +61,7 @@ fi
 
 # Only set LLM_MODEL env for llm fuzzers
 if [[ "$FUZZER" == *llm* ]]; then
-    LLM_ENV="--env=LLM_MODEL=$LLM_MODEL"
+    LLM_ENV="$LLM_ENV --env=LLM_MODEL=$LLM_MODEL --env=ROUND=$ARCID"
 else
     LLM_ENV=""
 fi

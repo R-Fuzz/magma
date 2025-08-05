@@ -4,12 +4,16 @@ FROM magma/aflgo_mazerunner/${target_name}
 ## Magma directory hierarchy
 # magma_root is relative to the docker-build's working directory
 # The Docker image must be built in the root of the magma directory
-ARG magma_root=./
+ARG magma_root=.
 ARG magma_path=magma
+## Path variables inside the container
+ENV MAGMA_R=/magma
+ENV SHARED=/magma_shared
 ENV MAGMA=${MAGMA_R}/${magma_path}
 
 USER root:root
 
+COPY --chown=magma:magma ${magma_root}/tools/captain/llm_response ${FUZZER}/llm_response
 COPY --chown=magma:magma ${magma_root}/fuzzers/llm/preinstall.sh ${FUZZER}
 RUN ${FUZZER}/preinstall.sh
 
