@@ -11,6 +11,28 @@ fuzzers = set()
 
 def output_details(json_path, csv_path, num_trials, trial_length):
     global fuzzers
+    # Define the order of programs
+    programs = [
+        "libpng_read_fuzzer",
+        "xml_read_memory_fuzzer", 
+        "xmllint",
+        "asn1",
+        "asn1parse",
+        "bignum",
+        "client",
+        "server",
+        "x509",
+        "exif",
+        "lua",
+        "pdf_fuzzer",
+        "pdfimages",
+        "pdftoppm",
+        "sndfile_fuzzer",
+        "sqlite3_fuzz",
+        "tiff_read_rgba_fuzzer",
+        "tiffcp",
+    ]
+    
     # Load JSON data
     with open(json_path) as f:
         data = json.load(f).get('results', {})
@@ -65,11 +87,21 @@ def output_details(json_path, csv_path, num_trials, trial_length):
         for metric in METRICS:
             header += [f'{f}_surv_{metric}', f'{f}_ci_{metric}', f'{f}_med_{metric}', f'{f}_count_{metric}']
 
-    # Write CSV
+    # Write CSV with ordered rows
     with open(csv_path, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(header)
-        for prog_bug in sorted(all_prog_bugs):
+        
+        # Sort prog_bugs by the predefined program order
+        def sort_key(prog_bug):
+            program, bug = prog_bug.split('/', 1)
+            try:
+                return (programs.index(program), bug)
+            except ValueError:
+                # If program not in the list, put it at the end
+                return (len(programs), bug)
+        
+        for prog_bug in sorted(all_prog_bugs, key=sort_key):
             row = [prog_bug]
             for f in fuzzers:
                 stats = fuzzer_stats.get(f, {}).get(prog_bug, {})
