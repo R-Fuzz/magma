@@ -71,12 +71,15 @@ while read patch; do
         echo "ERROR: testcase $LLM_FILE not found" >&2
         continue
     fi
-    "$PROGRAM_PATH" "$LLM_FILE"
+    
+    ARGS_WITH_FILE="${ARGS//@@/$LLM_FILE}"
+
+    "$PROGRAM_PATH" $ARGS_WITH_FILE
     # fill up canary buffer to let monitor read it
     i=0
     while [ $i -lt 60 ]; do
         sleep 1
-        "$PROGRAM_PATH" "$LLM_FILE" &> /dev/null
+        "$PROGRAM_PATH" $ARGS_WITH_FILE &> /dev/null
         i=$((i + 1))
     done
 done
