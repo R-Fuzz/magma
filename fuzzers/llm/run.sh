@@ -16,6 +16,18 @@
 
 ARGS=${ARGS:-"@@"}
 
+blacklist=(
+    "PNG002"                                     \
+    "PHP005" "PHP008" "SQL004" "SQL005" "SQL008" \
+    "SND006" "SND007" "SND024" "SSL002" "SSL004" \
+    "SSL005" "SSL008" "SSL009" "SSL011" "SSL012" \
+    "SSL014" "SSL015" "SSL017" "SSL018" "SSL019" \
+    "SSL020" "XML004" "XML005" "XML007" "XML013" \
+    "XML014" "XML015" "XML016" "PDF001" "PDF003" \
+    "PDF004" "PDF006" "PDF010" "PDF013" "PDF015" \
+    "PDF017" "PDF020" "TIF004" "TIF011" "TIF013"
+)
+
 cd "$FUZZER/symsan"
 git fetch --all
 git reset --hard origin/main
@@ -32,6 +44,11 @@ while read patch; do
     echo "Preparing env for $patch"
     NAME=${patch##*/}
     BUGID=${NAME%.patch}
+
+    if [[ " ${blacklist[*]} " =~ " ${BUGID} " ]]; then
+        echo "Skipping blacklisted BUG_ID: $BUG_ID"
+        continue
+    fi
 
     GEN_CODE_FILE=$(find "$FUZZER/llm_response/$PROGRAM" -maxdepth 1 -type f -name "${BUGID}_${LLM_MODEL}*${ROUND}.txt" 2>/dev/null | head -n 1)
     if [ -n "$GEN_CODE_FILE" ]; then
