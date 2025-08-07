@@ -10,7 +10,7 @@
 WORKDIR=./workdir
 
 # REPEAT: number of campaigns to run per program (per fuzzer)
-REPEAT=10
+REPEAT=1
 
 # [WORKER_MODE]: defines the type of CPU resources to allocate (default: 1)
 # - 1: logical cores (possibly SMT-enabled)
@@ -75,7 +75,7 @@ FUZZERS=(llm)
 # [fuzzer_TARGETS]: an array of target names (from magma/targets/*) to fuzz with
 # `fuzzer`. The `fuzzer` prefix is a fuzzer listed in the FUZZERS array
 # (default: all targets)
-llm_TARGETS=( lua )
+# llm_TARGETS=( libpng )
 
 # [fuzzer_target_PROGRAMS]: an array of program names (from
 # magma/targets/target/configrc) to use as execution drivers when fuzzing the
@@ -92,5 +92,4 @@ llm_TARGETS=( lua )
 # set it to 1 to run campaigns one by one (default: run in parallel)
 RUN_SEQUENTIALLY=0
 # set the model name to testing LLM input generation
-# see https://github.com/sgzeng/MazeRunner/blob/main/mazerunner/llm.py#L15
 LLM_MODEL="gpt-4o"
