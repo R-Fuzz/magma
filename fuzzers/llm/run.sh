@@ -68,7 +68,7 @@ while read patch; do
 
     LLM_FILE="$SHARED/findings/llm_${BUGID}"
     if [ ! -f "$LLM_FILE" ]; then
-        echo "ERROR: $LLM_FILE not found" >&2
+        echo "ERROR: testcase $LLM_FILE not found" >&2
         continue
     fi
     "$PROGRAM_PATH" "$LLM_FILE"

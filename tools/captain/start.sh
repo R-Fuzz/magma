@@ -67,6 +67,7 @@ else
 fi
 
 echo "Running $FUZZER/$TARGET/$PROGRAM/$BUGID with args <$ARGS>." >&2
+set -x
 
 if [ -t 1 ]; then
     docker run -it $flag_volume \
