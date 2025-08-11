@@ -117,16 +117,16 @@ static_analyze() {(
             BCS=$(find ${IR_DIR} -name "*.0.0.preopt.bc")
             for BC in $BCS; do
                 libfuzzer=$(llvm-nm-${LLVM_VERSION} $BC | grep -c -- " LLVMFuzzerTestOneInput$") || true
-                if [[ $libfuzzer -eq 0 ]]; then
-                    echo "main" > ${IR_DIR}/BBEntry.txt
-                else
-                    echo "LLVMFuzzerTestOneInput" > ${IR_DIR}/BBEntry.txt
-                fi
                 PROGRAM="$(basename ${BC%%.0*})"
+                if [[ $libfuzzer -eq 0 ]]; then
+                    echo "main" > ${IR_DIR}/${PROGRAM}_BBEntry.txt
+                else
+                    echo "LLVMFuzzerTestOneInput" > ${IR_DIR}/${PROGRAM}_BBEntry.txt
+                fi
                 PREFIX="${BUG_ID}_${PROGRAM}"
                 rm "${BC}_${BUG_ID}.bc" || true
                 if ! $FUZZER/kernel-analyzer/build/lib/KAMain \
-                    --entry-list=${IR_DIR}/BBEntry.txt \
+                    --entry-list=${IR_DIR}/${PROGRAM}_BBEntry.txt \
                     --target-list=$OUT/BBtargets.txt \
                     --dump-policy=$OUT/${PROGRAM}_policy.txt \
                     --dump-distance=$OUT/${PROGRAM}_distance.cfg.txt \
