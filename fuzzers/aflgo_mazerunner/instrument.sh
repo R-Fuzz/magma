@@ -12,6 +12,7 @@ set -e
 
 SKIP_STATIC_ANALYSIS=0
 REUSE_PREBUILT_BC=1
+# These bug IDs are verified to be statically not reachable from interprocedural whole program CFG.
 blacklist=(
     "PNG002"                                     \
     "PHP005" "PHP008" "SQL004" "SQL005" "SQL008" \
@@ -133,7 +134,7 @@ static_analyze() {(
                     --dump-bid-mapping=$OUT/${PROGRAM}_bid_loc_mapping.txt \
                     --dump-func-info=$OUT/${PROGRAM}_function_info.txt \
                     --dump-critical-branch=$OUT/${PROGRAM}_critical_BBs.txt \
-                    --call-stack-len=15 \
+                    --call-stack-len=20 \
                     --dump-annotated-ir="_${BUG_ID}.bc" \
                     --type-based-callgraph=1 \
                     "${BC}" 2> ${IR_DIR}/${PREFIX}.log; then
