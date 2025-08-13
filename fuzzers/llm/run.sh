@@ -94,7 +94,7 @@ while read patch; do
     "$PROGRAM_PATH" $ARGS_WITH_FILE
     # fill up canary buffer to let monitor read it
     i=0
-    while [ $i -lt 60 ]; do
+    while [ $i -lt 10 ]; do
         sleep 1
         "$PROGRAM_PATH" $ARGS_WITH_FILE &> /dev/null
         i=$((i + 1))
