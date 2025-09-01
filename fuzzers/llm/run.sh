@@ -28,6 +28,8 @@ blacklist=(
     "PDF017" "PDF020" "TIF004" "TIF011" "TIF013"
 )
 
+export PATH=/usr/lib/llvm-20/bin:$PATH
+
 cd "$FUZZER/symsan"
 git fetch --all
 git reset --hard origin/main
