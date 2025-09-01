@@ -51,16 +51,6 @@ while read patch; do
         echo "Skipping blacklisted BUG_ID: $BUG_ID"
         continue
     fi
-
-    GEN_CODE_FILE=$(find "$FUZZER/llm_response/$PROGRAM" -maxdepth 1 -type f -name "${BUGID}_${LLM_MODEL}*${ROUND}.txt" 2>/dev/null | head -n 1)
-    if [ -n "$GEN_CODE_FILE" ]; then
-        echo "Found LLM produced generator $GEN_CODE_FILE"
-        PRE_BUILT_FLAG="-code ${GEN_CODE_FILE}"
-    else
-        echo "No pre-produced GEN_CODE_FILE for $PROGRAM,$BUGID,$LLM_MODEL,$ROUND"
-        PRE_BUILT_FLAG=""
-        # continue
-    fi
     
     pushd "$TARGET/BBtargets/${BUGID}"
     cp ${PROGRAM}_policy.txt policy.txt
@@ -71,34 +61,7 @@ while read patch; do
 
     PROGRAM_PATH="$OUT/clang_bc/$(basename "$TARGET")/${PROGRAM}"
 
-    if [ ! -f "$PROGRAM_PATH" ]; then
-        echo "ERROR: Executable File $PROGRAM_PATH not found" >&2
-        continue
-    fi
-    
-    cd "$SHARED/findings"
-    python3 "$FUZZER/symsan/mazerunner/llm_baseline.py" \
-        -s "$TARGET/BBtargets/${BUGID}" \
-        -m "$LLM_MODEL" \
-        -l prompt_${BUGID}.log \
-        -info ${BUGID} \
-        $PRE_BUILT_FLAG \
-        -- "$PROGRAM_PATH" $ARGS
+# Andrew TODO: change this command. update args from env var
+python launcher.py -s /magma/targets/libxml2/BBtargets/XML009 -m gemini-2.0-flash -rounds 1 -c $TARGET/repo -o output -l -reached-pattern "Bug XML009 reached" -triggered-pattern "Bug XML009 triggered" -max-fuzz-gen 30 -temperature 0.3 --- /magma_out/clang_bc/libxml2/libxml2_xml_read_memory_fuzzer @@
 
-    LLM_FILE="$SHARED/findings/llm_${BUGID}"
-    if [ ! -f "$LLM_FILE" ]; then
-        echo "ERROR: testcase $LLM_FILE not found" >&2
-        continue
-    fi
-    
-    ARGS_WITH_FILE="${ARGS//@@/$LLM_FILE}"
-
-    "$PROGRAM_PATH" $ARGS_WITH_FILE
-    # fill up canary buffer to let monitor read it
-    i=0
-    while [ $i -lt 10 ]; do
-        sleep 1
-        "$PROGRAM_PATH" $ARGS_WITH_FILE &> /dev/null
-        i=$((i + 1))
-    done
 done
