@@ -70,6 +70,9 @@ if [[ ! -z $ANTHROPIC_API_KEY ]]; then
     anthropic_api_flag="--build-arg ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}"
 fi
 
+# Andrew TODOs:
+# You can pass some env var to docker image from here
+
 set -x
 if [[ "$FUZZER" == *llm* || "$FUZZER" == *mazerunner ]]; then
     docker build -t "$IMG_NAME" \

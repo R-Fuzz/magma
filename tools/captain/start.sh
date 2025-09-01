@@ -38,6 +38,9 @@ source "$MAGMA/tools/captain/common.sh"
 
 IMG_NAME="magma/$FUZZER/$TARGET"
 
+# Andrew TODOs:
+# you can create a custom config.json and copy into docker container at launching time
+# or you can pass them via docker run --env=XXX=YYY
 if [ ! -z $AFFINITY ]; then
     flag_aff="--cpuset-cpus=$AFFINITY --env=AFFINITY=$AFFINITY"
 fi
