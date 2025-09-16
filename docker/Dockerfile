@@ -131,4 +131,10 @@ COPY --chown=magma:magma ${magma_root}/${fuzzer_path}/runonce.sh ${FUZZER}
 COPY --chown=magma:magma ${magma_root}/${fuzzer_path}/findings.sh ${FUZZER}
 COPY --chown=magma:magma ${magma_root}/${target_path}/corpus ${TARGET}/corpus
 
+# Reset building flags
+ENV CFLAGS=""
+ENV CXXFLAGS=""
+ENV LIBS=""
+ENV LDFLAGS=""
+
 ENTRYPOINT ["/magma/magma/run.sh"]
