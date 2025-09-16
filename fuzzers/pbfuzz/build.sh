@@ -25,3 +25,7 @@ build_static_analyzer() {(
 )}
 
 build_static_analyzer
+
+$FUZZER/cursor_install.sh
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+echo 'export PATH=/usr/lib/llvm-20/bin:$PATH' >> ~/.bashrc

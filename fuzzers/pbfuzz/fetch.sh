@@ -8,6 +8,8 @@ set -e
 
 git clone -b mzt https://github.com/sgzeng/kernel-analyzer.git "$FUZZER/kernel-analyzer"
 
-git clone https://${GITHUB_TOKEN}@github.com/sgzeng/directed_property_based_fuzzer.git "$FUZZER/repo"
+# generate a GitHub token @https://github.com/settings/personal-access-tokens and set env var GITHUB_TOKEN
+git clone -b cursor https://${GITHUB_TOKEN}@github.com/sgzeng/directed_property_based_fuzzer.git "$FUZZER/repo"
 
-curl https://cursor.com/install -fsS | bash
+curl -fsS https://cursor.com/install -o "$FUZZER/cursor_install.sh" && \
+chmod +x "$FUZZER/cursor_install.sh"

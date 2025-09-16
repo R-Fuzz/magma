@@ -56,6 +56,7 @@ docker build -t "$IMG_NAME" \
     --build-arg target_name="$TARGET" \
     --build-arg USER_ID=$USER_ID \
     --build-arg GROUP_ID=$GROUP_ID \
+    --build-arg GITHUB_TOKEN=$GITHUB_TOKEN \
     $mode_flag $isan_flag $harden_flag \
     -f "$DOCKERFILE_PATH" "$MAGMA"
 set +x

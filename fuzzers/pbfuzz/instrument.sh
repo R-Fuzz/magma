@@ -104,6 +104,8 @@ if [[ $SKIP_STATIC_ANALYSIS -eq 0 ]]; then
     build_bitcode
     static_analyze
 else
-    mv "${FUZZER}/pre-built/BBtargets" "$OUT/" || true
-    mv "${FUZZER}/pre-built/clang_bc" "$OUT/" || true
+    rm -rf "${OUT}/BBtargets" || true
+    rm -rf "${OUT}/clang_bc" || true
+    mv "${FUZZER}/pre-built/BBtargets" "$OUT/"
+    mv "${FUZZER}/pre-built/clang_bc" "$OUT/"
 fi
