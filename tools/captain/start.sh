@@ -38,9 +38,6 @@ source "$MAGMA/tools/captain/common.sh"
 
 IMG_NAME="magma/$FUZZER/$TARGET"
 
-# Andrew TODOs:
-# you can create a custom config.json and copy into docker container at launching time
-# or you can pass them via docker run --env=XXX=YYY
 if [ ! -z $AFFINITY ]; then
     flag_aff="--cpuset-cpus=$AFFINITY --env=AFFINITY=$AFFINITY"
 fi
@@ -58,12 +55,12 @@ if [ -z "$BUGID" ]; then
     BUGID="ALL"
 fi
 
-if [[ "$FUZZER" != *llm* ]]; then
+if [[ "$FUZZER" != *pbfuzz* ]]; then
     NETWORK_ACCESS="--network=none"
 fi
 
 # Only set LLM_MODEL env for llm fuzzers
-if [[ "$FUZZER" == *llm* ]]; then
+if [[ "$FUZZER" == *pbfuzz* ]]; then
     LLM_ENV="$LLM_ENV --env=LLM_MODEL=$LLM_MODEL --env=ROUND=$ARCID"
 else
     LLM_ENV=""
@@ -77,7 +74,9 @@ if [ -t 1 ]; then
         --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
         --env=PROGRAM="$PROGRAM" --env=ARGS="$ARGS" \
         --env=FUZZARGS="$FUZZARGS" --env=POLL="$POLL" --env=TIMEOUT="$TIMEOUT" \
-        --env=BUGID="$BUGID" \
+        --env=BUGID="$BUGID" --env=OPENAI_API_KEY="$OPENAI_API_KEY"  \
+        --env=GOOGLE_API_KEY="$GOOGLE_API_KEY" --env=ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
+        --env=GITHUB_TOKEN="$GITHUB_TOKEN" \
         $LLM_ENV $NETWORK_ACCESS \
         $flag_aff $flag_ep "$IMG_NAME"
 else
@@ -86,7 +85,9 @@ else
         --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
         --env=PROGRAM="$PROGRAM" --env=ARGS="$ARGS" \
         --env=FUZZARGS="$FUZZARGS" --env=POLL="$POLL" --env=TIMEOUT="$TIMEOUT" \
-        --env=BUGID="$BUGID" \
+        --env=BUGID="$BUGID" --env=OPENAI_API_KEY="$OPENAI_API_KEY"  \
+        --env=GOOGLE_API_KEY="$GOOGLE_API_KEY" --env=ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
+        --env=GITHUB_TOKEN="$GITHUB_TOKEN" \
         $LLM_ENV $NETWORK_ACCESS \
         $flag_aff $flag_ep "$IMG_NAME"
     )

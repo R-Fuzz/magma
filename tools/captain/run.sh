@@ -353,8 +353,21 @@ for FUZZER in "${FUZZERS[@]}"; do
                 BUGIDS=($(basename -a "$BUG_DIR"/*.patch | sed 's/\.patch$//'))
             fi
             echo_time "Found ${#BUGIDS[@]} bugs for $PROGRAM in $BUG_DIR"
-            if [[ "$FUZZER" == *mazerunner ]]; then
+            if [[ "$FUZZER" == *pbfuzz* ]]; then
                 for BUGID in "${BUGIDS[@]}"; do
+                    if [ -n "${BLACKLIST+x}" ]; then
+                        skip=0
+                        for b in "${BLACKLIST[@]}"; do
+                            if [ "$b" = "$BUGID" ]; then
+                                echo_time "Skipping blacklisted BUGID $BUGID for $FUZZER/$TARGET/$PROGRAM"
+                                skip=1
+                                break
+                            fi
+                        done
+                        if [ $skip -eq 1 ]; then
+                            continue
+                        fi
+                    fi
                     export BUGID
                     # Set campaign directories for this specific bug
                     CAMPAIGN_ARDIR="$ARDIR/$FUZZER/$TARGET/$PROGRAM/$BUGID"

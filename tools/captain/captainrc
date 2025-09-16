@@ -70,17 +70,17 @@ POC_EXTRACT=1
 ###
 
 # FUZZERS: an array of fuzzer names (from magma/fuzzers/*) to evaluate
-FUZZERS=(llm)
+FUZZERS=(pbfuzz)
 
 # [fuzzer_TARGETS]: an array of target names (from magma/targets/*) to fuzz with
 # `fuzzer`. The `fuzzer` prefix is a fuzzer listed in the FUZZERS array
 # (default: all targets)
-# llm_TARGETS=( libpng )
+pbfuzz_TARGETS=(libpng)
 
 # [fuzzer_target_PROGRAMS]: an array of program names (from
 # magma/targets/target/configrc) to use as execution drivers when fuzzing the
 # `target`
-# afl_libtiff_PROGRAMS=(tiffcp)
+pbfuzz_libpng_PROGRAMS=(libpng_read_fuzzer)
 
 # [fuzzer_target_FUZZARGS]: a string containing fuzzer/target-specific arguments
 # when fuzzing `target` with `fuzzer`
@@ -92,4 +92,22 @@ FUZZERS=(llm)
 # set it to 1 to run campaigns one by one (default: run in parallel)
 RUN_SEQUENTIALLY=0
 # set the model name to testing LLM input generation
-LLM_MODEL="gpt-4o"
+LLM_MODEL="gpt-5-mini"
+
+# set the LLM model key
+OPENAI_API_KEY=" "
+GOOGLE_API_KEY=" "
+ANTHROPIC_API_KEY=" "
+
+# Optional list of BUGIDs to skip.
+BLACKLIST=(
+    "PNG002"                                     \
+    "PHP005" "PHP008" "SQL004" "SQL005" "SQL008" \
+    "SND006" "SND007" "SND024" "SSL002" "SSL004" \
+    "SSL005" "SSL008" "SSL009" "SSL011" "SSL012" \
+    "SSL014" "SSL015" "SSL017" "SSL018" "SSL019" \
+    "SSL020" "XML004" "XML005" "XML007" "XML013" \
+    "XML014" "XML015" "XML016" "PDF001" "PDF003" \
+    "PDF004" "PDF006" "PDF010" "PDF013" "PDF015" \
+    "PDF017" "PDF020" "TIF004" "TIF011" "TIF013"
+)
