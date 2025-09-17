@@ -38,7 +38,7 @@ pip install -U --no-cache-dir \
 
 pip install --no-cache-dir \
     pydantic mcp dap-mcp dap-types \
-    cxxfilt wllvm \
+    cxxfilt wllvm psutil \
     pytest pytest-asyncio \
     tree-sitter tree-sitter-c tree-sitter-cpp tree-sitter-languages libclang
 

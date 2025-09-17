@@ -42,9 +42,9 @@ if [ ! -z $AFFINITY ]; then
     flag_aff="--cpuset-cpus=$AFFINITY --env=AFFINITY=$AFFINITY"
 fi
 
-if [ ! -z "$ENTRYPOINT" ]; then
-    flag_ep="--entrypoint=$ENTRYPOINT"
-fi
+# default to the in-container runner if ENTRYPOINT not provided
+ENTRYPOINT=${ENTRYPOINT:-/magma/magma/run.sh}
+flag_ep="--entrypoint=$ENTRYPOINT"
 
 if [ ! -z "$SHARED" ]; then
     SHARED="$(realpath "$SHARED")"
