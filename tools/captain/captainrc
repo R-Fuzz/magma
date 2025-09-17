@@ -30,7 +30,7 @@ REPEAT=1
 # [TIMEOUT]: time to run each campaign. This variable supports one-letter
 # suffixes to indicate duration (s: seconds, m: minutes, h: hours, d: days)
 # (default: 1m)
-TIMEOUT=24h
+TIMEOUT=30m
 
 # [POLL]: time (in seconds) between polls (default: 5)
 POLL=1
@@ -91,8 +91,8 @@ pbfuzz_libpng_PROGRAMS=(libpng_read_fuzzer)
 
 # set it to 1 to run campaigns one by one (default: run in parallel)
 RUN_SEQUENTIALLY=0
-# set the model name to testing LLM input generation
-LLM_MODEL="gpt-5-mini"
+# set the model name to testing LLM input generation. eg, sonnet-4, gpt-5, opus-4.1, grok
+LLM_MODEL="sonnet-4"
 
 # set the LLM model key
 OPENAI_API_KEY=" "

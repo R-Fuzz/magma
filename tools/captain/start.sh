@@ -77,6 +77,7 @@ if [ -t 1 ]; then
         --env=BUGID="$BUGID" --env=OPENAI_API_KEY="$OPENAI_API_KEY"  \
         --env=GOOGLE_API_KEY="$GOOGLE_API_KEY" --env=ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
         --env=GITHUB_TOKEN="$GITHUB_TOKEN" \
+        -v $HOME/.config/cursor:/home/.config/cursor \
         $LLM_ENV $NETWORK_ACCESS \
         $flag_aff $flag_ep "$IMG_NAME"
 else
@@ -88,6 +89,7 @@ else
         --env=BUGID="$BUGID" --env=OPENAI_API_KEY="$OPENAI_API_KEY"  \
         --env=GOOGLE_API_KEY="$GOOGLE_API_KEY" --env=ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
         --env=GITHUB_TOKEN="$GITHUB_TOKEN" \
+        -v $HOME/.config/cursor:/home/.config/cursor \
         $LLM_ENV $NETWORK_ACCESS \
         $flag_aff $flag_ep "$IMG_NAME"
     )
