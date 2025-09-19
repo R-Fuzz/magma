@@ -36,6 +36,7 @@ if [ -n "$COMMIT" ]; then
     git checkout "$COMMIT"
 fi
 
+TARGET_NAME="$(basename "$TARGET")"
 python3 ${FUZZER}/repo/launcher.py \
     -s ${OUT}/BBtargets/${BUGID} \
     -m ${LLM_MODEL} \
@@ -44,7 +45,7 @@ python3 ${FUZZER}/repo/launcher.py \
     -o "$SHARED/findings" \
     -reached-pattern "Bug ${BUGID} reached" \
     -triggered-pattern "Bug ${BUGID} triggered" \
-    -- "$OUT/clang_bc/$PROGRAM" $ARGS
+    -- "$OUT/clang_bc/$TARGET_NAME/$PROGRAM" $ARGS
 
 # Start new detached tmux session running cursor-agent
 # cursor cli tool does not support auto-approval of mcp servers in non-interactive mode
@@ -55,7 +56,6 @@ CONTINUE_PROMPT_FILE="$SHARED/findings/continue_prompt.txt"
 AGENT_LOG_FILE="$SHARED/findings/agent.log"
 
 SRC_DIR=$TARGET/repo/
-TARGET_NAME="$(basename "$TARGET")"
 if [ "sqlite3" = "$TARGET_NAME" ]; then
     SRC_DIR=$TARGET/work/
 fi
@@ -79,7 +79,7 @@ if echo "$OUTPUT" | grep -q "MCP Server Approval Required"; then
 fi
 
 OUTPUT=$(tmux capture-pane -t "$SESSION" -p -S -100)
-if echo "$OUTPUT" | grep -q "Welcome to Cursor Agent"; then
+if echo "$OUTPUT" | grep -q "Cursor Agent"; then
     # Load prompt.txt into buffer and paste it once, then press Enter
     tmux load-buffer /dev/null
     tmux load-buffer "$PROMPT_FILE"
@@ -87,6 +87,7 @@ if echo "$OUTPUT" | grep -q "Welcome to Cursor Agent"; then
     sleep 3
     tmux send-keys -t "$SESSION" C-m
     sleep 5m
+    # Workaround of Bug in interactive mode, cursor-agent may pause unexpectedly.
     tmux send-keys -t "$SESSION" "$(cat "$CONTINUE_PROMPT_FILE")" C-m
     sleep 5m
     tmux send-keys -t "$SESSION" "$(cat "$CONTINUE_PROMPT_FILE")" C-m
@@ -94,7 +95,7 @@ fi
 
 sleep 10m
 tmux send-keys -t "$SESSION" C-c
-tmux capture-pane -t "$SESSION" -p -S -1000 > $AGENT_LOG_FILE
+tmux capture-pane -t "$SESSION" -p -S -2000 > $AGENT_LOG_FILE
 sleep 3
 tmux send-keys -t "$SESSION" C-d
 cp -r $HOME/.cursor $SHARED/findings

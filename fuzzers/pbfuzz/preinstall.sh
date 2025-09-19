@@ -44,6 +44,9 @@ pip install --no-cache-dir \
 
 # we need llvm-20 for lldb, LLVM_VERSION is 14 by default
 # we need llvm-14 for building magma targets
-curl -O https://apt.llvm.org/llvm.sh \
-    && chmod +x llvm.sh \
-    && ./llvm.sh 20 && ./llvm.sh $LLVM_VERSION
+curl -O https://apt.llvm.org/llvm.sh && chmod +x llvm.sh
+./llvm.sh 14 all
+./llvm.sh 20 all
+
+ln -s /usr/bin/clang-14 /usr/local/bin/clang
+ln -s /usr/bin/clang++-14 /usr/local/bin/clang++

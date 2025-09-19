@@ -29,17 +29,35 @@ TARGET_NAME="$(basename $TARGET)"
 IR_DIR="${OUT}/clang_bc/${TARGET_NAME}"
 mkdir -p "$IR_DIR"
 
+SRC_DIR=$TARGET/repo/
+TARGET_NAME="$(basename "$TARGET")"
+if [ "sqlite3" = "$TARGET_NAME" ]; then
+    SRC_DIR=$TARGET/work/
+fi
+cp $FUZZER/src/magma.md $SRC_DIR
+
 # build bitcode files
 build_bitcode() {(
-    unset LIBS
-    export AR=llvm-ar-${LLVM_VERSION}
-    export RANLIB=llvm-ranlib-${LLVM_VERSION}
+    export PATH=/usr/lib/llvm-${LLVM_VERSION}/bin:$PATH
+    export LLVM_COMPILER=clang
     export CC="wllvm"
     export CXX="wllvm++"
-    export LLVM_COMPILER=clang-${LLVM_VERSION}
-
+    export AR=llvm-ar-${LLVM_VERSION}
+    export RANLIB=llvm-ranlib-${LLVM_VERSION}
+    
     export OUT="$IR_DIR"
+    export LDFLAGS="$LDFLAGS -L$OUT -g"
+    export FUZZER_LIB="$OUT/libafl_driver.a"
+    
+    # Build AFL driver and create static library
     $CXX -std=c++11 -c "$FUZZER/src/afl_driver.cpp" -fPIC -o "$OUT/afl_driver.o"
+    $AR rcs $FUZZER_LIB "$OUT/afl_driver.o"
+
+    DYNAMIC_TARGETS=(poppler)
+    if [[ ! " ${DYNAMIC_TARGETS[@]} " =~ " $TARGET_NAME " ]]; then
+        export LIBS="$LIBS $FUZZER_LIB"
+    fi
+
     "$MAGMA/build.sh"
     "$TARGET/build.sh"
 )}
@@ -61,12 +79,6 @@ static_analyze() (
         if [[ " ${blacklist[*]} " =~ " ${BUG_ID} " ]]; then
             echo "Skipping blacklisted BUG_ID: $BUG_ID"
             continue
-        fi
-
-        SRC_DIR=$TARGET/repo/
-        TARGET_NAME="$(basename "$TARGET")"
-        if [ "sqlite3" = "$TARGET_NAME" ]; then
-            SRC_DIR=$TARGET/work/
         fi
 
         for PROGRAM in "${PROGRAMS[@]}"; do
@@ -100,8 +112,8 @@ static_analyze() (
     done
 )
 
+build_bitcode
 if [[ $SKIP_STATIC_ANALYSIS -eq 0 ]]; then
-    build_bitcode
     static_analyze
 else
     rm -rf "${OUT}/BBtargets" || true
