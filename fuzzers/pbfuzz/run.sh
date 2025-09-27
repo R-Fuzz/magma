@@ -20,16 +20,16 @@ export PATH=/usr/lib/llvm-20/bin:$PATH
 export PATH="$HOME/.local/bin:$PATH"
 
 pushd "${OUT}/BBtargets/${BUGID}"
-cp ${PROGRAM}_policy.txt policy.txt
-cp ${PROGRAM}_distance.cfg.txt distance.cfg.txt
-cp ${PROGRAM}_bid_loc_mapping.txt bid_loc_mapping.txt
-cp ${PROGRAM}_function_info.txt function_info.txt
-cp ${PROGRAM}_caller-callee.txt caller-callee.txt
-cp ${PROGRAM}_callee-caller.txt callee-caller.txt
-cp ${PROGRAM}_critical_BBs.txt critical_BBs.txt
+cp "${PROGRAM}_policy.txt" "policy.txt"
+cp "${PROGRAM}_distance.cfg.txt" "distance.cfg.txt"
+cp "${PROGRAM}_bid_loc_mapping.txt" "bid_loc_mapping.txt"
+cp "${PROGRAM}_function_info.txt" "function_info.txt"
+cp "${PROGRAM}_caller-callee.txt" "caller-callee.txt"
+cp "${PROGRAM}_callee-caller.txt" "callee-caller.txt"
+cp "${PROGRAM}_critical_BBs.txt" "critical_BBs.txt"
 popd
 
-cd ${FUZZER}/repo
+cd "${FUZZER}/repo"
 git fetch --all
 git reset --hard origin/cursor
 if [ -n "$COMMIT" ]; then
@@ -37,11 +37,11 @@ if [ -n "$COMMIT" ]; then
 fi
 
 TARGET_NAME="$(basename "$TARGET")"
-python3 ${FUZZER}/repo/launcher.py \
-    -s ${OUT}/BBtargets/${BUGID} \
-    -m ${LLM_MODEL} \
-    -c $TARGET/repo \
-    -i $TARGET/corpus/${PROGRAM} \
+python3 "${FUZZER}/repo/launcher.py" \
+    -s "${OUT}/BBtargets/${BUGID}" \
+    -m "${LLM_MODEL}" \
+    -c "$TARGET/repo" \
+    -i "$TARGET/corpus/${PROGRAM}" \
     -o "$SHARED/findings" \
     -reached-pattern "Bug ${BUGID} reached" \
     -triggered-pattern "Bug ${BUGID} triggered" \
@@ -52,30 +52,28 @@ python3 ${FUZZER}/repo/launcher.py \
 # This is an ugly workaround hopefully the newer cursor versions will support it
 SESSION="cursor_session"
 PROMPT_FILE="$SHARED/findings/prompt.txt"
-CONTINUE_PROMPT_FILE="$SHARED/findings/continue_prompt.txt"
 AGENT_LOG_FILE="$SHARED/findings/agent.log"
 
-SRC_DIR=$TARGET/repo/
-cd $SRC_DIR
+SRC_DIR="$TARGET/repo/"
+cd "$SRC_DIR"
 
 tmux new-session -d -s "$SESSION" "cursor-agent --force --model ${LLM_MODEL}"
 sleep 3
 
-OUTPUT=$(tmux capture-pane -t "$SESSION" -p -S -0)
+OUTPUT="$(tmux capture-pane -t "$SESSION" -p -S -0)"
 if echo "$OUTPUT" | grep -q "Workspace Trust Required"; then
-    # Trust workspace
     tmux send-keys -t "$SESSION" "a"
     sleep 3
 fi
 
-OUTPUT=$(tmux capture-pane -t "$SESSION" -p -S -0)
+OUTPUT="$(tmux capture-pane -t "$SESSION" -p -S -0)"
 if echo "$OUTPUT" | grep -q "MCP Server Approval Required"; then
     # Approve MCP servers
     tmux send-keys -t "$SESSION" "a"
     sleep 3
 fi
 
-OUTPUT=$(tmux capture-pane -t "$SESSION" -p -S -100)
+OUTPUT="$(tmux capture-pane -t "$SESSION" -p -S -100)"
 if ! (echo "$OUTPUT" | grep -q "Cursor Agent"); then
     exit 1
 fi
@@ -92,28 +90,26 @@ CRASH_DIR="$SHARED/findings/crashes"
 TIMEOUT=900
 END=$(($(date +%s) + TIMEOUT))
 
-KEYWORDS="Generating|Reading|Running|Calling|Updating"
-CRASH_DIR="$SHARED/findings/crashes"
-
+sleep 60
 while [ "$(date +%s)" -lt "$END" ]; do
-    LAST8=$(tmux capture-pane -t "$SESSION" -p -S 0 | tail -n 9)
-    if ! echo "$LAST8" | grep -E -q "$KEYWORDS"; then
-        sleep 5
-        LAST8=$(tmux capture-pane -t "$SESSION" -p -S 0 | tail -n 9)
-        if ! echo "$LAST8" | grep -E -q "$KEYWORDS"; then
-        # Agent appears stuck
-        if [ ! -d "$CRASH_DIR" ] || [ -z "$(ls -A "$CRASH_DIR" 2>/dev/null)" ]; then
-            tmux send-keys -t "$SESSION" "Read workflow_state.md and continue"
-            tmux send-keys -t "$SESSION" C-m
-        fi
+    LAST9="$(tmux capture-pane -t "$SESSION" -p -S 0 | tail -n 9)"
+    if ! echo "$LAST9" | grep -E -q "$KEYWORDS"; then
+        sleep 1
+        LAST9="$(tmux capture-pane -t "$SESSION" -p -S 0 | tail -n 9)"
+        if ! echo "$LAST9" | grep -E -q "$KEYWORDS"; then
+            if [ ! -d "$CRASH_DIR" ] || [ -z "$(ls -A "$CRASH_DIR" 2>/dev/null)" ]; then
+                tmux send-keys -t "$SESSION" "Read workflow_state.md and continue"
+                tmux send-keys -t "$SESSION" C-m
+            fi
         fi
     fi
-    sleep 5
+    sleep 10
 done
 
-tmux capture-pane -t "$SESSION" -p -S -2000 > $AGENT_LOG_FILE
+tmux capture-pane -t "$SESSION" -p -S -5000 > "$AGENT_LOG_FILE"
 sleep 1
-cp -r $HOME/.cursor $SHARED/findings
-cp $TARGET/repo/.cursor/mcp.json $SHARED/findings/.cursor
+cp -r "$HOME/.cursor" "$SHARED/findings" || true
+cp "$TARGET/repo/.cursor/*" "$SHARED/findings/.cursor" || true
 tmux send-keys -t "$SESSION" C-c
 tmux send-keys -t "$SESSION" C-d
+tmux kill-session -t "$SESSION" || true
