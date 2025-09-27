@@ -56,22 +56,19 @@ CONTINUE_PROMPT_FILE="$SHARED/findings/continue_prompt.txt"
 AGENT_LOG_FILE="$SHARED/findings/agent.log"
 
 SRC_DIR=$TARGET/repo/
-if [ "sqlite3" = "$TARGET_NAME" ]; then
-    SRC_DIR=$TARGET/work/
-fi
 cd $SRC_DIR
 
 tmux new-session -d -s "$SESSION" "cursor-agent --force --model ${LLM_MODEL}"
 sleep 3
 
-OUTPUT=$(tmux capture-pane -t "$SESSION" -p -S -100)
+OUTPUT=$(tmux capture-pane -t "$SESSION" -p -S -0)
 if echo "$OUTPUT" | grep -q "Workspace Trust Required"; then
     # Trust workspace
     tmux send-keys -t "$SESSION" "a"
     sleep 3
 fi
 
-OUTPUT=$(tmux capture-pane -t "$SESSION" -p -S -100)
+OUTPUT=$(tmux capture-pane -t "$SESSION" -p -S -0)
 if echo "$OUTPUT" | grep -q "MCP Server Approval Required"; then
     # Approve MCP servers
     tmux send-keys -t "$SESSION" "a"
@@ -79,23 +76,44 @@ if echo "$OUTPUT" | grep -q "MCP Server Approval Required"; then
 fi
 
 OUTPUT=$(tmux capture-pane -t "$SESSION" -p -S -100)
-if echo "$OUTPUT" | grep -q "Cursor Agent"; then
-    # Load prompt.txt into buffer and paste it once, then press Enter
-    tmux load-buffer /dev/null
-    tmux load-buffer "$PROMPT_FILE"
-    tmux paste-buffer -t "$SESSION"
-    sleep 3
-    tmux send-keys -t "$SESSION" C-m
-    sleep 5m
-    # Workaround of Bug in interactive mode, cursor-agent may pause unexpectedly.
-    tmux send-keys -t "$SESSION" "$(cat "$CONTINUE_PROMPT_FILE")" C-m
-    sleep 5m
-    tmux send-keys -t "$SESSION" "$(cat "$CONTINUE_PROMPT_FILE")" C-m
+if ! (echo "$OUTPUT" | grep -q "Cursor Agent"); then
+    exit 1
 fi
 
-sleep 10m
-tmux send-keys -t "$SESSION" C-c
-tmux capture-pane -t "$SESSION" -p -S -2000 > $AGENT_LOG_FILE
+# Load prompt.txt into buffer and paste it once, then press Enter
+tmux load-buffer /dev/null
+tmux load-buffer "$PROMPT_FILE"
+tmux paste-buffer -t "$SESSION"
 sleep 3
-tmux send-keys -t "$SESSION" C-d
+tmux send-keys -t "$SESSION" C-m
+
+KEYWORDS="Generating|Reading|Running|Calling|Updating"
+CRASH_DIR="$SHARED/findings/crashes"
+TIMEOUT=900
+END=$(($(date +%s) + TIMEOUT))
+
+KEYWORDS="Generating|Reading|Running|Calling|Updating"
+CRASH_DIR="$SHARED/findings/crashes"
+
+while [ "$(date +%s)" -lt "$END" ]; do
+    LAST8=$(tmux capture-pane -t "$SESSION" -p -S 0 | tail -n 9)
+    if ! echo "$LAST8" | grep -E -q "$KEYWORDS"; then
+        sleep 5
+        LAST8=$(tmux capture-pane -t "$SESSION" -p -S 0 | tail -n 9)
+        if ! echo "$LAST8" | grep -E -q "$KEYWORDS"; then
+        # Agent appears stuck
+        if [ ! -d "$CRASH_DIR" ] || [ -z "$(ls -A "$CRASH_DIR" 2>/dev/null)" ]; then
+            tmux send-keys -t "$SESSION" "Read workflow_state.md and continue"
+            tmux send-keys -t "$SESSION" C-m
+        fi
+        fi
+    fi
+    sleep 5
+done
+
+tmux capture-pane -t "$SESSION" -p -S -2000 > $AGENT_LOG_FILE
+sleep 1
 cp -r $HOME/.cursor $SHARED/findings
+cp $TARGET/repo/.cursor/mcp.json $SHARED/findings/.cursor
+tmux send-keys -t "$SESSION" C-c
+tmux send-keys -t "$SESSION" C-d
