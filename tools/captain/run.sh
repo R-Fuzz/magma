@@ -418,5 +418,13 @@ for FUZZER in "${FUZZERS[@]}"; do
                 done
             fi
         done
+        if [[ "$FUZZER" == *pbfuzz* ]]; then
+            if [[ "$RUN_SEQUENTIALLY" != "1" ]]; then
+                echo_time "Waiting for all campaigns of $FUZZER/$TARGET to finish..."
+                wait
+            fi
+            echo_time "Finished scheduling $FUZZER/$TARGET, sleep 10min"
+            sleep 600
+        fi
     done
 done
