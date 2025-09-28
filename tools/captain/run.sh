@@ -159,10 +159,6 @@ start_campaign()
             echo_time "Container $FUZZER/$TARGET/$PROGRAM/${BUGID}/$ARCID started on CPU $AFFINITY"
             "$MAGMA"/tools/captain/start.sh &> \
                 "${LOGDIR}/${FUZZER}_${TARGET}_${PROGRAM}_${BUGID}_${ARCID}_container.log"
-        elif [ -n "$LLM_MODEL" ]; then
-            echo_time "Container $FUZZER/$TARGET/$PROGRAM/$ARCID started on CPU $AFFINITY"
-            "$MAGMA"/tools/captain/start.sh &> \
-                "${LOGDIR}/${FUZZER}_${LLM_MODEL}_${TARGET}_${PROGRAM}_${ARCID}_container.log"
         else
             echo_time "Container $FUZZER/$TARGET/$PROGRAM/$ARCID started on CPU $AFFINITY"
             "$MAGMA"/tools/captain/start.sh &> \
