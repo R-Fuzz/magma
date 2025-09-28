@@ -87,7 +87,7 @@ tmux send-keys -t "$SESSION" C-m
 
 KEYWORDS="Generating|Reading|Running|Calling|Updating"
 CRASH_DIR="$SHARED/findings/crashes"
-TIMEOUT=900
+TIMEOUT=1200  # 20 minutes
 END=$(($(date +%s) + TIMEOUT))
 
 sleep 60
