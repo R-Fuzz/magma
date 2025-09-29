@@ -28,4 +28,4 @@ if [ -z "$args" ]; then
 fi
 
 timeout -s KILL --preserve-status $TIMELIMIT bash -c \
-    "run_limited '$OUT/aflgo/$BUGID/$PROGRAM' $args"
+    "run_limited '$OUT/clang_bc/$BUGID/$PROGRAM' $args"

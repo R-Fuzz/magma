@@ -10,7 +10,7 @@ set -xe
 # - env PROGRAM: name of program to run (should be found in $OUT)
 # - env ARGS: extra arguments to pass to the program
 # - env FUZZARGS: extra arguments to pass to the fuzzer
-# - env LLM_MODEL: sonnet-4, gpt-5, opus-4.1, grok
+# - env LLM_MODEL: sonnet-4.5, sonnet-4.5-thinking, gpt-5, opus-4.1, grok
 ##
 
 mkdir -p "$SHARED/findings"

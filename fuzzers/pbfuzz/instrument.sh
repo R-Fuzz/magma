@@ -30,49 +30,67 @@ IR_DIR="${OUT}/clang_bc/${TARGET_NAME}"
 mkdir -p "$IR_DIR"
 
 SRC_DIR=$TARGET/repo/
-TARGET_NAME="$(basename "$TARGET")"
-if [ "sqlite3" = "$TARGET_NAME" ]; then
-    SRC_DIR=$TARGET/work/
-fi
 cp $FUZZER/src/magma.md $SRC_DIR
 
 # build bitcode files
 build_bitcode() {(
-    export PATH=/usr/lib/llvm-${LLVM_VERSION}/bin:$PATH
-    export LLVM_COMPILER=clang
-    export CC="wllvm"
-    export CXX="wllvm++"
+    export CXX=clang++-${LLVM_VERSION}
+    export CC=clang-${LLVM_VERSION}
     export AR=llvm-ar-${LLVM_VERSION}
     export RANLIB=llvm-ranlib-${LLVM_VERSION}
-    
+
     export OUT="$IR_DIR"
-    export LDFLAGS="$LDFLAGS -L$OUT -g"
-    export FUZZER_LIB="$OUT/libafl_driver.a"
-    
-    # Build AFL driver and create static library
-    $CXX -std=c++11 -c "$FUZZER/src/afl_driver.cpp" -fPIC -o "$OUT/afl_driver.o"
-    $AR rcs $FUZZER_LIB "$OUT/afl_driver.o"
+    export LDFLAGS="$LDFLAGS -g -L$OUT -fuse-ld=lld-${LLVM_VERSION} -Wl,-plugin-opt=save-temps"
+    export FUZZER_LIB="$OUT/libfuzzer-harness-fast.a"
+    $CC $CFLAGS -c -fPIC -o $OUT/harness-proxy.o "$FUZZER/src/afl_driver.cpp"
+    $AR rcu $FUZZER_LIB $OUT/harness-proxy.o
+
+    export CFLAGS="$CFLAGS -O0 -g -fPIC -flto"
+    export CXXFLAGS="$CXXFLAGS -O0 -g -fPIC -flto"
 
     DYNAMIC_TARGETS=(poppler)
     if [[ ! " ${DYNAMIC_TARGETS[@]} " =~ " $TARGET_NAME " ]]; then
         export LIBS="$LIBS $FUZZER_LIB"
     fi
 
+    ZLIB_TARGETS=(libpng libtiff)
+    if [[ " ${ZLIB_TARGETS[@]} " =~ " $TARGET_NAME " ]]; then
+        cp $FUZZER/zlib-1.2.13/libz.a $OUT
+        export LIBS="$LIBS $OUT/libz.a"
+    fi
+
+    if [ "lua" = ${TARGET_NAME} ]; then
+        #readline
+        cp $FUZZER/readline-8.1.2/libreadline.a $OUT
+        cp $FUZZER/termcap-1.3.1/libtermcap.a $OUT
+        export LIBS="$LIBS $OUT/libtermcap.a $OUT/libreadline.a"
+    fi
+
     "$MAGMA/build.sh"
     "$TARGET/build.sh"
 )}
 
-static_analyze() (
-    cd "$OUT"
-    source "$TARGET/configrc"
+# static analysis
+static_analyze() {(
+    set +e
 
-    for PROGRAM in "${PROGRAMS[@]}"; do
-        extract-bc "$PROGRAM"
-    done
+    # Skip static analysis for php and openssl targets.
+    # Some projects are large and analysis is slow.
+    # Copy pre-analyzed BBtargets for faster image build.
+    if [[ $SKIP_STATIC_ANALYSIS -eq 1 ]]; then
+        echo "Skipping static analysis for $TARGET_NAME"
+        return
+    fi
+    # Reuse pre-built clang bitcode files for consistent analysis results.
+    if [[ $REUSE_PREBUILT_BC -eq 1 ]]; then
+        echo "Reusing pre-built BBtargets for $TARGET_NAME"
+        rm -rf "$OUT/clang_bc/*"
+        cp -r "$FUZZER/pre-built/${TARGET_NAME}/clang_bc" "$OUT/"
+    fi
 
     find "$TARGET/patches/bugs" -name "*.patch" | \
-        while read -r patch; do
-        echo "Preparing static analysis env for $patch"  
+    while read patch; do
+        echo "Preparing static analysis env for $patch"
         NAME=${patch##*/}
         BUG_ID=${NAME%.patch}
 
@@ -80,44 +98,66 @@ static_analyze() (
             echo "Skipping blacklisted BUG_ID: $BUG_ID"
             continue
         fi
+        
+        SRC_DIR=$TARGET/repo/
+        if [ "sqlite3" = $TARGET_NAME ]; then
+            SRC_DIR=$TARGET/work/
+        fi
 
-        for PROGRAM in "${PROGRAMS[@]}"; do
-            BUG_PATH="${OUT}/BBtargets/${PROGRAM}/${BUG_ID}"
-            rm -rf "$BUG_PATH" || true
-            mkdir -p "$BUG_PATH"
-
+        (
+            OUT="${TARGET}/BBtargets/${BUG_ID}"
+            rm -rf $OUT || true
+            mkdir -p $OUT
             if ! grep "MAGMA_LOG(\"${BUG_ID}" "$SRC_DIR" -nR | \
-            awk -F: '{print $1":"$2}' | sed 's/.*\///' \
-            > "$BUG_PATH/BBtargets.txt"; then
-            echo "Error: Failed to find MAGMA_LOG for BUG_ID: $BUG_ID" >&2
-            continue
+                awk -F: '{print $1":"$2}' | sed 's/.*\///' \
+                > $OUT/BBtargets.txt; then
+                echo "Error: Failed to find MAGMA_LOG for BUG_ID: $BUG_ID" >&2
+                continue
             fi
 
-            BC=$(find "$OUT" -name "$PROGRAM.bc")
-            if ! "$FUZZER/kernel-analyzer/build/lib/KAMain" \
-                --target-list="$BUG_PATH/BBtargets.txt" \
-                --dump-distance="$BUG_PATH/${PROGRAM}_distance.cfg.txt" \
-                --dump-bid-mapping="$BUG_PATH/${PROGRAM}_bid_loc_mapping.txt" \
-                --dump-func-info="$BUG_PATH/${PROGRAM}_function_info.txt" \
-                --dump-critical-branch="$BUG_PATH/${PROGRAM}_critical_BBs.txt" \
-                --dump-caller-callee="$BUG_PATH/${PROGRAM}_caller-callee.txt" \
-                --dump-callee-caller="$BUG_PATH/${PROGRAM}_callee-caller.txt" \
-                --call-stack-len=20 \
-                --type-based-callgraph=1 \
-                "$BC"; then
-            echo "Error: KAMain analysis failed for BUG_ID: $BUG_ID, PROGRAM: $PROGRAM" >&2
-            continue
-            fi
-        done
+            BCS=$(find ${IR_DIR} -name "*.0.0.preopt.bc")
+            for BC in $BCS; do
+                PROGRAM="$(basename ${BC%%.0*})"
+                # libfuzzer=$(llvm-nm-${LLVM_VERSION} $BC | grep -c -- " LLVMFuzzerTestOneInput$") || true
+                # if [[ $libfuzzer -eq 0 ]]; then
+                #     echo "main" > ${IR_DIR}/${PROGRAM}_BBEntry.txt
+                # else
+                #     echo "LLVMFuzzerTestOneInput" > ${IR_DIR}/${PROGRAM}_BBEntry.txt
+                # fi
+                PREFIX="${BUG_ID}_${PROGRAM}"
+                rm "${BC}_${BUG_ID}.bc" || true
+                if ! $FUZZER/kernel-analyzer/build/lib/KAMain \
+                    --target-list=$OUT/BBtargets.txt \
+                    --dump-policy=$OUT/${PROGRAM}_policy.txt \
+                    --dump-distance=$OUT/${PROGRAM}_distance.cfg.txt \
+                    --dump-bid-mapping=$OUT/${PROGRAM}_bid_loc_mapping.txt \
+                    --dump-func-info=$OUT/${PROGRAM}_function_info.txt \
+                    --dump-critical-branch=$OUT/${PROGRAM}_critical_BBs.txt \
+                    --dump-caller-callee=$OUT/${PROGRAM}_caller-callee.txt \
+                    --dump-callee-caller=$OUT/${PROGRAM}_callee-caller.txt \
+                    --call-stack-len=20 \
+                    --dump-annotated-ir="_${BUG_ID}.bc" \
+                    --type-based-callgraph=1 \
+                    "${BC}" 2> ${IR_DIR}/${PREFIX}.log; then
+                    echo "Error: KAMain analysis failed for BUG_ID: $BUG_ID, PROGRAM: $PROGRAM" >&2
+                    continue
+                fi
+            done
+            # generate instrumentation list for afl++
+            cat ${OUT}/*_distance.cfg.txt | grep '^fun:' >> ${IR_DIR}/afl_allow.txt || true
+        )
     done
-)
+    if [ -s "${IR_DIR}/afl_allow.txt" ]; then
+        sort -u "${IR_DIR}/afl_allow.txt" -o "${IR_DIR}/afl_allow.txt"
+    else
+        rm "$IR_DIR/afl_allow.txt"
+    fi
+)}
 
 build_bitcode
 if [[ $SKIP_STATIC_ANALYSIS -eq 0 ]]; then
     static_analyze
 else
     rm -rf "${OUT}/BBtargets" || true
-    rm -rf "${OUT}/clang_bc" || true
     mv "${FUZZER}/pre-built/BBtargets" "$OUT/"
-    mv "${FUZZER}/pre-built/clang_bc" "$OUT/"
 fi

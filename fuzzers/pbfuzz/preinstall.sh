@@ -7,7 +7,7 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get upgrade -y
 apt-get install -y \
-    make cmake \
+    make cmake gdb tree\
     python3 python3-pip python3-dev python-is-python3\
     zlib1g-dev git wget vim tmux \
     build-essential lsb-release software-properties-common \

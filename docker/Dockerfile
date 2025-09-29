@@ -136,5 +136,3 @@ ENV CFLAGS=""
 ENV CXXFLAGS=""
 ENV LIBS=""
 ENV LDFLAGS=""
-
-ENTRYPOINT ["/magma/magma/run.sh"]
