@@ -57,11 +57,11 @@ static bool magma_init(void)
 
 void magma_log(const char *bug, int condition)
 {
+    fprintf(stderr, "MAGMA: Bug %s reached\n", bug);
+    if (condition) fprintf(stderr, "MAGMA: Bug %s triggered\n", bug);
 
 #ifndef MAGMA_DISABLE_CANARIES
     if (!data_ptr && !magma_init()) {
-        fprintf(stderr, "MAGMA: Bug %s reached\n", bug);
-        if (condition) fprintf(stderr, "MAGMA: Bug %s triggered\n", bug);
         goto fatal;
     }
 
@@ -70,10 +70,6 @@ void magma_log(const char *bug, int condition)
 #endif
 
     pcanary_t prod_canary   = stor_get(data_ptr->producer_buffer, bug);
-    if (prod_canary->reached < 1)
-        fprintf(stderr, "MAGMA: Bug %s reached\n", bug);
-    if (prod_canary->triggered < 1 && condition)
-        fprintf(stderr, "MAGMA: Bug %s triggered\n", bug);
     prod_canary->reached   += 1         & (magma_faulty ^ 1);
     prod_canary->triggered += (bool)condition & (magma_faulty ^ 1);
     if (data_ptr->consumed) {
