@@ -22,7 +22,7 @@ cd "$TARGET/repo"
 (set +e ; ./autogen.sh) || \
 echo "autogen.sh failed to grab config.guess and config.sub from upstream master, continuing anyway"
 ./configure --disable-shared --prefix="$WORK" \
-    --disable-lzma --disable-jpeg
+    --disable-lzma --disable-jpeg --disable-zstd
 make -j$(nproc) clean
 make -j$(nproc)
 make install
