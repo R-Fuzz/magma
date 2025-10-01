@@ -85,7 +85,7 @@ tmux paste-buffer -t "$SESSION"
 sleep 3
 tmux send-keys -t "$SESSION" C-m
 
-KEYWORDS="Generating|Reading|Running|Calling|Updating"
+KEYWORDS="Generating|Reading|Running|Calling|Updating|Grepping|workflow_state.md"
 CRASH_DIR="$SHARED/findings/crashes"
 TIMEOUT=1200  # 20 minutes
 END=$(($(date +%s) + TIMEOUT))
@@ -94,7 +94,7 @@ sleep 60
 while [ "$(date +%s)" -lt "$END" ]; do
     LAST9="$(tmux capture-pane -t "$SESSION" -p -S 0 | tail -n 9)"
     if ! echo "$LAST9" | grep -E -q "$KEYWORDS"; then
-        sleep 1
+        sleep 5
         LAST9="$(tmux capture-pane -t "$SESSION" -p -S 0 | tail -n 9)"
         if ! echo "$LAST9" | grep -E -q "$KEYWORDS"; then
             if [ ! -d "$CRASH_DIR" ] || [ -z "$(ls -A "$CRASH_DIR" 2>/dev/null)" ]; then
@@ -109,7 +109,9 @@ done
 tmux capture-pane -t "$SESSION" -p -S -5000 > "$AGENT_LOG_FILE"
 sleep 1
 cp -r "$HOME/.cursor" "$SHARED/findings" || true
-cp "$TARGET/repo/.cursor/*" "$SHARED/findings/.cursor" || true
+cp "$TARGET/repo/.cursor/mcp.json" "$SHARED/findings/.cursor" || true
+cp "$TARGET/repo/.cursor/project_config.md" "$SHARED/findings/.cursor" || true
+cp "$TARGET/repo/.cursor/workflow_state.md" "$SHARED/findings/.cursor" || true
 tmux send-keys -t "$SESSION" C-c
 tmux send-keys -t "$SESSION" C-d
 tmux kill-session -t "$SESSION" || true
