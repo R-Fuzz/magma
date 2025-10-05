@@ -9,7 +9,7 @@ apt-get upgrade -y
 apt-get install -y \
     make cmake gdb tree\
     python3 python3-pip python3-dev python-is-python3\
-    zlib1g-dev git wget vim tmux \
+    zlib1g-dev git wget vim tmux libtiff-tools \
     build-essential lsb-release software-properties-common \
     binutils-gold binutils-dev autoconf automake libtool-bin \
     curl ninja-build libz3-dev libzstd-dev\

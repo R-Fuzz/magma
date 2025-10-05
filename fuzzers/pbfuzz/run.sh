@@ -19,6 +19,17 @@ ARGS=${ARGS:-"@@"}
 export PATH=/usr/lib/llvm-20/bin:$PATH
 export PATH="$HOME/.local/bin:$PATH"
 
+extract_progress() {                # input: block of text
+  printf '%s' "$1" | grep -oE '[0-9]+(\.[0-9]+)?%' | head -n1
+}
+
+percent_gt() {                      # args: VALUE% THRESHOLD%
+  local v="$1" t="$2"
+  [ -n "$v" ] || return 1
+  v="${v%\%}"; t="${t%\%}"
+  awk -v a="$v" -v b="$t" 'BEGIN{ exit (a>b)?0:1 }'
+}
+
 pushd "${OUT}/BBtargets/${BUGID}"
 cp "${PROGRAM}_policy.txt" "policy.txt"
 cp "${PROGRAM}_distance.cfg.txt" "distance.cfg.txt"
@@ -85,9 +96,9 @@ tmux paste-buffer -t "$SESSION"
 sleep 3
 tmux send-keys -t "$SESSION" C-m
 
-KEYWORDS="Generating|Reading|Running|Calling|Updating|Grepping|workflow_state.md"
+KEYWORDS="Generating|Reading|Running|Calling|Updating|Grepping|Summarizing|workflow_state.md"
 CRASH_DIR="$SHARED/findings/crashes"
-TIMEOUT=1200  # 20 minutes
+TIMEOUT=1800  # 30 minutes
 END=$(($(date +%s) + TIMEOUT))
 
 sleep 60
@@ -95,11 +106,19 @@ while [ "$(date +%s)" -lt "$END" ]; do
     LAST9="$(tmux capture-pane -t "$SESSION" -p -S 0 | tail -n 9)"
     if ! echo "$LAST9" | grep -E -q "$KEYWORDS"; then
         sleep 5
+        if percent_gt "$(extract_progress "$LAST9")" "70%"; then
+            tmux send-keys -t "$SESSION" "/compress"
+            tmux send-keys -t "$SESSION" C-m
+            sleep 20
+        fi
         LAST9="$(tmux capture-pane -t "$SESSION" -p -S 0 | tail -n 9)"
         if ! echo "$LAST9" | grep -E -q "$KEYWORDS"; then
             if [ ! -d "$CRASH_DIR" ] || [ -z "$(ls -A "$CRASH_DIR" 2>/dev/null)" ]; then
-                tmux send-keys -t "$SESSION" "Read workflow_state.md and continue"
+                tmux send-keys -t "$SESSION" "Do not give up. Read workflow_state.md and continue."
                 tmux send-keys -t "$SESSION" C-m
+            else
+                echo "PoC found, stopping the agent."
+                break
             fi
         fi
     fi
