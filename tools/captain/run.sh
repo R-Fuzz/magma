@@ -189,9 +189,6 @@ start_campaign()
         if [ -n "$BUGID" ]; then
             export CAMPAIGN_CACHEDIR="$CACHEDIR/$FUZZER/$TARGET/$PROGRAM/$BUGID"
             export CAMPAIGN_ARDIR="$ARDIR/$FUZZER/$TARGET/$PROGRAM/$BUGID"
-        elif [ -n "$LLM_MODEL" ]; then
-            export CAMPAIGN_CACHEDIR="$CACHEDIR/${FUZZER}_${LLM_MODEL}/$TARGET/$PROGRAM"
-            export CAMPAIGN_ARDIR="$ARDIR/${FUZZER}_${LLM_MODEL}/$TARGET/$PROGRAM"
         else
             export CAMPAIGN_CACHEDIR="$CACHEDIR/$FUZZER/$TARGET/$PROGRAM"
             export CAMPAIGN_ARDIR="$ARDIR/$FUZZER/$TARGET/$PROGRAM"
@@ -375,24 +372,21 @@ for FUZZER in "${FUZZERS[@]}"; do
                     fi
                     echo_time "Starting campaigns. cmd=<$PROGRAM $ARGS>, bug=${BUGID}, starting from campaign $missing_start"
                     for ((i=missing_start; i<$REPEAT; i++)); do
+                        unset NUMWORKERS
+                        unset AFFINITY
                         if [[ "$RUN_SEQUENTIALLY" == "1" ]]; then
-                            unset NUMWORKERS
-                            unset AFFINITY
                             start_ex
                         else
-                            export NUMWORKERS="$(get_var_or_default $FUZZER 'CAMPAIGN_WORKERS')"
-                            export AFFINITY=$(allocate_workers)
+                            # export NUMWORKERS="$(get_var_or_default $FUZZER 'CAMPAIGN_WORKERS')"
+                            # export AFFINITY=$(allocate_workers)
+                            sleep 30
                             start_ex &
                         fi
                     done
                 done
             else
                 # Set campaign directories for this program
-                if [ -n "$LLM_MODEL" ]; then
-                    CAMPAIGN_ARDIR="$ARDIR/${FUZZER}_${LLM_MODEL}/$TARGET/$PROGRAM"
-                else
-                    CAMPAIGN_ARDIR="$ARDIR/$FUZZER/$TARGET/$PROGRAM"
-                fi
+                CAMPAIGN_ARDIR="$ARDIR/$FUZZER/$TARGET/$PROGRAM"
                 # Check if campaigns are already completed for this program
                 missing_start=$(get_missing_campaigns "$CAMPAIGN_ARDIR" "$REPEAT")
                 if [ "$missing_start" = "completed" ]; then

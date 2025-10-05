@@ -20,24 +20,24 @@ export PATH=/usr/lib/llvm-20/bin:$PATH
 export PATH="$HOME/.local/bin:$PATH"
 
 extract_progress() {                # input: block of text
-  printf '%s' "$1" | grep -oE '[0-9]+(\.[0-9]+)?%' | head -n1
+    printf '%s' "$1" | grep -oE '[0-9]+(\.[0-9]+)?%' | head -n1
 }
 
 percent_gt() {                      # args: VALUE% THRESHOLD%
-  local v="$1" t="$2"
-  [ -n "$v" ] || return 1
-  v="${v%\%}"; t="${t%\%}"
-  awk -v a="$v" -v b="$t" 'BEGIN{ exit (a>b)?0:1 }'
+    local v="$1" t="$2"
+    [ -n "$v" ] || return 1
+    v="${v%\%}"; t="${t%\%}"
+    awk -v a="$v" -v b="$t" 'BEGIN{ exit (a>b)?0:1 }'
 }
 
 pushd "${OUT}/BBtargets/${BUGID}"
-cp "${PROGRAM}_policy.txt" "policy.txt"
-cp "${PROGRAM}_distance.cfg.txt" "distance.cfg.txt"
-cp "${PROGRAM}_bid_loc_mapping.txt" "bid_loc_mapping.txt"
-cp "${PROGRAM}_function_info.txt" "function_info.txt"
-cp "${PROGRAM}_caller-callee.txt" "caller-callee.txt"
-cp "${PROGRAM}_callee-caller.txt" "callee-caller.txt"
-cp "${PROGRAM}_critical_BBs.txt" "critical_BBs.txt"
+cp "${PROGRAM}_policy.txt" "policy.txt" || true
+cp "${PROGRAM}_distance.cfg.txt" "distance.cfg.txt" || true
+cp "${PROGRAM}_bid_loc_mapping.txt" "bid_loc_mapping.txt" || true
+cp "${PROGRAM}_function_info.txt" "function_info.txt" || true
+cp "${PROGRAM}_caller-callee.txt" "caller-callee.txt" || true
+cp "${PROGRAM}_callee-caller.txt" "callee-caller.txt" || true
+cp "${PROGRAM}_critical_BBs.txt" "critical_BBs.txt" || true
 popd
 
 cd "${FUZZER}/repo"
@@ -96,9 +96,9 @@ tmux paste-buffer -t "$SESSION"
 sleep 3
 tmux send-keys -t "$SESSION" C-m
 
-KEYWORDS="Generating|Reading|Running|Calling|Updating|Grepping|Summarizing|workflow_state.md"
+KEYWORDS="Generating|Reading|Running|Calling|Updating|Grepping|Summarizing|fuzz|workflow_state.md"
 CRASH_DIR="$SHARED/findings/crashes"
-TIMEOUT=1800  # 30 minutes
+TIMEOUT=1500
 END=$(($(date +%s) + TIMEOUT))
 
 sleep 60
