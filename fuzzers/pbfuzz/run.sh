@@ -30,15 +30,17 @@ percent_gt() {                      # args: VALUE% THRESHOLD%
     awk -v a="$v" -v b="$t" 'BEGIN{ exit (a>b)?0:1 }'
 }
 
-pushd "${OUT}/BBtargets/${BUGID}"
-cp "${PROGRAM}_policy.txt" "policy.txt" || true
-cp "${PROGRAM}_distance.cfg.txt" "distance.cfg.txt" || true
-cp "${PROGRAM}_bid_loc_mapping.txt" "bid_loc_mapping.txt" || true
-cp "${PROGRAM}_function_info.txt" "function_info.txt" || true
-cp "${PROGRAM}_caller-callee.txt" "caller-callee.txt" || true
-cp "${PROGRAM}_callee-caller.txt" "callee-caller.txt" || true
-cp "${PROGRAM}_critical_BBs.txt" "critical_BBs.txt" || true
-popd
+if [ -d "${OUT}/BBtargets/${BUGID}" ]; then
+    pushd "${OUT}/BBtargets/${BUGID}"
+    cp "${PROGRAM}_policy.txt" "policy.txt" || true
+    cp "${PROGRAM}_distance.cfg.txt" "distance.cfg.txt" || true
+    cp "${PROGRAM}_bid_loc_mapping.txt" "bid_loc_mapping.txt" || true
+    cp "${PROGRAM}_function_info.txt" "function_info.txt" || true
+    cp "${PROGRAM}_caller-callee.txt" "caller-callee.txt" || true
+    cp "${PROGRAM}_callee-caller.txt" "callee-caller.txt" || true
+    cp "${PROGRAM}_critical_BBs.txt" "critical_BBs.txt" || true
+    popd
+fi
 
 cd "${FUZZER}/repo"
 git fetch --all
@@ -111,8 +113,8 @@ while [ "$(date +%s)" -lt "$END" ]; do
             tmux send-keys -t "$SESSION" C-m
             sleep 20
         fi
-        LAST9="$(tmux capture-pane -t "$SESSION" -p -S 0 | tail -n 9)"
-        if ! echo "$LAST9" | grep -E -q "$KEYWORDS"; then
+        LAST11="$(tmux capture-pane -t "$SESSION" -p -S 0 | tail -n 11)"
+        if ! echo "$LAST11" | grep -E -q "$KEYWORDS"; then
             if [ ! -d "$CRASH_DIR" ] || [ -z "$(ls -A "$CRASH_DIR" 2>/dev/null)" ]; then
                 tmux send-keys -t "$SESSION" "Do not give up. Read workflow_state.md and continue."
                 tmux send-keys -t "$SESSION" C-m

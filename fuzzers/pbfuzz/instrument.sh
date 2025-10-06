@@ -38,15 +38,24 @@ build_bitcode() {(
     export CC=clang-${LLVM_VERSION}
     export AR=llvm-ar-${LLVM_VERSION}
     export RANLIB=llvm-ranlib-${LLVM_VERSION}
-
+    
+    # Ensure we use LLVM $LLVM_VERSION toolchain
+    export PATH="/usr/lib/llvm-${LLVM_VERSION}/bin:$PATH"
+    export LD_LIBRARY_PATH="/usr/lib/llvm-${LLVM_VERSION}/lib:$LD_LIBRARY_PATH"
+    
     export OUT="$IR_DIR"
     export LDFLAGS="$LDFLAGS -g -L$OUT -fuse-ld=lld-${LLVM_VERSION} -Wl,-plugin-opt=save-temps"
     export FUZZER_LIB="$OUT/libfuzzer-harness-fast.a"
-    $CC $CFLAGS -c -fPIC -o $OUT/harness-proxy.o "$FUZZER/src/afl_driver.cpp"
+    $CXX $CXXFLAGS -c -fPIC -o $OUT/harness-proxy.o "$FUZZER/src/afl_driver.cpp"
     $AR rcu $FUZZER_LIB $OUT/harness-proxy.o
 
     export CFLAGS="$CFLAGS -O0 -g -fPIC -flto"
     export CXXFLAGS="$CXXFLAGS -O0 -g -fPIC -flto"
+
+    if [[ "sqlite3" == "$TARGET_NAME" ]]; then
+        export LDFLAGS="$LDFLAGS -stdlib=libc++ -lc++"
+        export CXXFLAGS="$CXXFLAGS -stdlib=libc++"
+    fi
 
     DYNAMIC_TARGETS=(poppler)
     if [[ ! " ${DYNAMIC_TARGETS[@]} " =~ " $TARGET_NAME " ]]; then
