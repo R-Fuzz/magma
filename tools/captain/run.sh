@@ -344,6 +344,31 @@ for FUZZER in "${FUZZERS[@]}"; do
             BUGIDS=()
             if [ -d "$BUG_DIR" ]; then
                 BUGIDS=($(basename -a "$BUG_DIR"/*.patch | sed 's/\.patch$//'))
+                # If WHITELIST is defined and non-empty, filter BUGIDS to only those in WHITELIST
+                if [ -n "${WHITELIST+x}" ] && [ ${#WHITELIST[@]} -gt 0 ]; then
+                    # Build an associative array for quick lookup
+                    declare -A wl_map
+                    for w in "${WHITELIST[@]}"; do wl_map["$w"]=1; done
+                    filtered=()
+                    for b in "${BUGIDS[@]}"; do
+                        if [ -n "${wl_map[$b]}" ]; then
+                            filtered+=("$b")
+                        fi
+                    done
+                    BUGIDS=("${filtered[@]}")
+                fi
+                # If BLACKLIST is defined, remove any blacklisted IDs from BUGIDS
+                if [ -n "${BLACKLIST+x}" ] && [ ${#BLACKLIST[@]} -gt 0 ]; then
+                    declare -A bl_map
+                    for bl in "${BLACKLIST[@]}"; do bl_map["$bl"]=1; done
+                    filtered2=()
+                    for b in "${BUGIDS[@]}"; do
+                        if [ -z "${bl_map[$b]}" ]; then
+                            filtered2+=("$b")
+                        fi
+                    done
+                    BUGIDS=("${filtered2[@]}")
+                fi
             fi
             echo_time "Found ${#BUGIDS[@]} bugs for $PROGRAM in $BUG_DIR"
             if [[ "$FUZZER" == *pbfuzz* ]]; then

@@ -114,7 +114,7 @@ static_analyze() {(
         fi
 
         (
-            OUT="${TARGET}/BBtargets/${BUG_ID}"
+            OUT="${OUT}/BBtargets/${BUG_ID}"
             rm -rf $OUT || true
             mkdir -p $OUT
             if ! grep "MAGMA_LOG(\"${BUG_ID}" "$SRC_DIR" -nR | \
@@ -145,7 +145,6 @@ static_analyze() {(
                     --dump-caller-callee=$OUT/${PROGRAM}_caller-callee.txt \
                     --dump-callee-caller=$OUT/${PROGRAM}_callee-caller.txt \
                     --call-stack-len=20 \
-                    --dump-annotated-ir="_${BUG_ID}.bc" \
                     --type-based-callgraph=1 \
                     "${BC}" 2> ${IR_DIR}/${PREFIX}.log; then
                     echo "Error: KAMain analysis failed for BUG_ID: $BUG_ID, PROGRAM: $PROGRAM" >&2
