@@ -60,4 +60,4 @@ python3 "${FUZZER}/repo/launcher.py" -baseline \
     -- "$OUT/clang_bc/$TARGET_NAME/$PROGRAM" $ARGS
 
 cd "$TARGET/repo"
-cursor-agent --force --output-format stream-json -p "$(cat $SHARED/findings/prompt.txt)" &> $SHARED/findings/agent.log
+cursor-agent --force --model "${LLM_MODEL}" --output-format stream-json -p "$(cat $SHARED/findings/prompt.txt)" &> $SHARED/findings/agent.log
