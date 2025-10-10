@@ -38,9 +38,9 @@ source "$MAGMA/tools/captain/common.sh"
 
 IMG_NAME="magma/$FUZZER/$TARGET"
 
-if [ ! -z $AFFINITY ]; then
-    flag_aff="--cpuset-cpus=$AFFINITY --env=AFFINITY=$AFFINITY"
-fi
+# if [ ! -z $AFFINITY ]; then
+#     flag_aff="--cpuset-cpus=$AFFINITY --env=AFFINITY=$AFFINITY"
+# fi
 
 # default to the in-container runner if ENTRYPOINT not provided
 ENTRYPOINT=${ENTRYPOINT:-/magma/magma/run.sh}
@@ -55,16 +55,7 @@ if [ -z "$BUGID" ]; then
     BUGID="ALL"
 fi
 
-if [[ "$FUZZER" != *pbfuzz* ]]; then
-    NETWORK_ACCESS="--network=none"
-fi
-
-# Only set LLM_MODEL env for llm fuzzers
-if [[ "$FUZZER" == *pbfuzz* ]]; then
-    LLM_ENV="$LLM_ENV --env=LLM_MODEL=$LLM_MODEL --env=ROUND=$ARCID"
-else
-    LLM_ENV=""
-fi
+LLM_ENV="$LLM_ENV --env=LLM_MODEL=$LLM_MODEL --env=ROUND=$ARCID"
 
 echo "Running $FUZZER/$TARGET/$PROGRAM/$BUGID with args <$ARGS>." >&2
 set -x

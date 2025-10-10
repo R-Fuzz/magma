@@ -1,4 +1,0 @@
-fun:make_fcontext=uninstrumented
-fun:make_fcontext=discard
-fun:jump_fcontext=uninstrumented
-fun:jump_fcontext=discard

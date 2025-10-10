@@ -371,75 +371,51 @@ for FUZZER in "${FUZZERS[@]}"; do
                 fi
             fi
             echo_time "Found ${#BUGIDS[@]} bugs for $PROGRAM in $BUG_DIR"
-            if [[ "$FUZZER" == *pbfuzz* ]]; then
-                for BUGID in "${BUGIDS[@]}"; do
-                    if [ -n "${BLACKLIST+x}" ]; then
-                        skip=0
-                        for b in "${BLACKLIST[@]}"; do
-                            if [ "$b" = "$BUGID" ]; then
-                                echo_time "Skipping blacklisted BUGID $BUGID for $FUZZER/$TARGET/$PROGRAM"
-                                skip=1
-                                break
-                            fi
-                        done
-                        if [ $skip -eq 1 ]; then
-                            continue
-                        fi
-                    fi
-                    export BUGID
-                    # Set campaign directories for this specific bug
-                    CAMPAIGN_ARDIR="$ARDIR/$FUZZER/$TARGET/$PROGRAM/$BUGID"
-                    # Check if campaigns are already completed for this bug
-                    missing_start=$(get_missing_campaigns "$CAMPAIGN_ARDIR" "$REPEAT")
-                    if [ "$missing_start" = "completed" ]; then
-                        echo_time "Campaigns already completed for $FUZZER/$TARGET/$PROGRAM/$BUGID. Skipping."
-                        continue
-                    fi
-                    echo_time "Starting campaigns. cmd=<$PROGRAM $ARGS>, bug=${BUGID}, starting from campaign $missing_start"
-                    for ((i=missing_start; i<$REPEAT; i++)); do
-                        unset NUMWORKERS
-                        unset AFFINITY
-                        if [[ "$RUN_SEQUENTIALLY" == "1" ]]; then
-                            start_ex
-                        else
-                            # export NUMWORKERS="$(get_var_or_default $FUZZER 'CAMPAIGN_WORKERS')"
-                            # export AFFINITY=$(allocate_workers)
-                            sleep 30
-                            start_ex &
+            for BUGID in "${BUGIDS[@]}"; do
+                if [ -n "${BLACKLIST+x}" ]; then
+                    skip=0
+                    for b in "${BLACKLIST[@]}"; do
+                        if [ "$b" = "$BUGID" ]; then
+                            echo_time "Skipping blacklisted BUGID $BUGID for $FUZZER/$TARGET/$PROGRAM"
+                            skip=1
+                            break
                         fi
                     done
-                done
-            else
-                # Set campaign directories for this program
-                CAMPAIGN_ARDIR="$ARDIR/$FUZZER/$TARGET/$PROGRAM"
-                # Check if campaigns are already completed for this program
+                    if [ $skip -eq 1 ]; then
+                        continue
+                    fi
+                fi
+                export BUGID
+                # Set campaign directories for this specific bug
+                CAMPAIGN_ARDIR="$ARDIR/$FUZZER/$TARGET/$PROGRAM/$BUGID"
+                # Check if campaigns are already completed for this bug
                 missing_start=$(get_missing_campaigns "$CAMPAIGN_ARDIR" "$REPEAT")
                 if [ "$missing_start" = "completed" ]; then
-                    echo_time "Campaigns already completed for $FUZZER/$TARGET/$PROGRAM. Skipping."
+                    echo_time "Campaigns already completed for $FUZZER/$TARGET/$PROGRAM/$BUGID. Skipping."
                     continue
                 fi
-                
-                echo_time "Starting campaigns for $PROGRAM $ARGS, starting from campaign $missing_start"
+                echo_time "Starting campaigns. cmd=<$PROGRAM $ARGS>, bug=${BUGID}, starting from campaign $missing_start"
                 for ((i=missing_start; i<$REPEAT; i++)); do
+                    unset NUMWORKERS
+                    unset AFFINITY
                     if [[ "$RUN_SEQUENTIALLY" == "1" ]]; then
-                        unset NUMWORKERS
-                        unset AFFINITY
                         start_ex
                     else
-                        export NUMWORKERS="$(get_var_or_default $FUZZER 'CAMPAIGN_WORKERS')"
-                        export AFFINITY=$(allocate_workers)
+                        # export NUMWORKERS="$(get_var_or_default $FUZZER 'CAMPAIGN_WORKERS')"
+                        # export AFFINITY=$(allocate_workers)
+                        sleep 30
                         start_ex &
                     fi
                 done
-            fi
+            done
         done
-        if [[ "$FUZZER" == *pbfuzz* ]]; then
-            if [[ "$RUN_SEQUENTIALLY" != "1" ]]; then
-                echo_time "Waiting for all campaigns of $FUZZER/$TARGET to finish..."
-                wait
-            fi
-            echo_time "Finished scheduling $FUZZER/$TARGET, sleep 10min"
-            sleep 600
+
+        if [[ "$RUN_SEQUENTIALLY" != "1" ]]; then
+            echo_time "Waiting for all campaigns of $FUZZER/$TARGET to finish..."
+            wait
         fi
+        # echo_time "Finished scheduling $FUZZER/$TARGET, sleep 10min"
+        # sleep 600
+
     done
 done
