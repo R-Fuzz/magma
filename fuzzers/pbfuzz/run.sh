@@ -128,11 +128,21 @@ while [ "$(date +%s)" -lt "$END" ]; do
 done
 
 tmux capture-pane -t "$SESSION" -p -S -5000 > "$AGENT_LOG_FILE"
-sleep 1
+sleep 3
 cp -r "$HOME/.cursor" "$SHARED/findings" || true
 cp "$TARGET/repo/.cursor/mcp.json" "$SHARED/findings/.cursor" || true
 cp "$TARGET/repo/.cursor/project_config.md" "$SHARED/findings/.cursor" || true
 cp "$TARGET/repo/.cursor/workflow_state.md" "$SHARED/findings/.cursor" || true
+
+# If PoC found, make sure magma records it
+if [ -d "$CRASH_DIR" ] && [ -n "$(ls -A "$CRASH_DIR" 2>/dev/null)" ]; then
+    for f in "$CRASH_DIR"/*; do
+        RUNARGS="${f} ${ARGS//@@/$f}"
+        "$OUT/clang_bc/$TARGET_NAME/$PROGRAM" $RUNARGS
+    done
+    sleep 5
+fi
+
 tmux send-keys -t "$SESSION" C-c
 tmux send-keys -t "$SESSION" C-d
 tmux kill-session -t "$SESSION" || true
