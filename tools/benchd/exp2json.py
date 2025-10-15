@@ -58,8 +58,8 @@ def path_split_last(path, n):
 
 def find_campaigns(workdir):
     ar_dir = os.path.join(workdir, "ar")
-    for root, dirs, _, level in walklevel(ar_dir, 3):
-        if level == 3:
+    for root, dirs, _, level in walklevel(ar_dir, 4):
+        if level == 4:
             for run in dirs:
                 # `run` directories always have integer-only names
                 if not run.isdigit():
@@ -138,7 +138,7 @@ def generate_monitor_df(dumpdir, campaign):
 
 def process_one_campaign(path):
     logging.info("Processing %s", path)
-    _, fuzzer, target, program, run = path_split_last(path, 4)
+    _, fuzzer, target, program, bugid, run = path_split_last(path, 5)
 
     tarball = os.path.join(path, "ball.tar")
     istarball = False
@@ -165,7 +165,7 @@ def process_one_campaign(path):
         if istarball:
             clear_dir(dumpdir)
             os.rmdir(dumpdir)
-    return fuzzer, target, program, run, df, reason
+    return fuzzer, target, program, bugid, run, df, reason
 
 def collect_experiment_data(workdir, workers):
     def init(*args):
@@ -180,28 +180,32 @@ def collect_experiment_data(workdir, workers):
         results = pool.starmap(process_one_campaign,
             ((path,) for path in find_campaigns(workdir))
         )
-        for fuzzer, target, program, run, df, reason in results:
+        for fuzzer, target, program, bugid, run, df, reason in results:
             if df is not None:
-                experiment[fuzzer][target][program][run] = df
+                experiment[fuzzer][target][program][bugid][run] = df
             else:
                 # TODO add an empty df so that the run is accounted for
-                name = f"{fuzzer}/{target}/{program}/{run}"
+                name = f"{fuzzer}/{target}/{program}/{bugid}/{run}"
                 logging.warning("%s has been omitted! Reason: %s", name, reason)
     return experiment
 
-def get_ttb_from_df(df):
+def get_ttb_from_df(df, bugid):
     reached = {}
     triggered = {}
-
-    bugs = set(x[:-2] for x in df.columns)
-    logging.debug("Bugs found: %s", bugs)
-    for bug in bugs:
-        R = df[df[f"{bug}_R"] > 0]
+    
+    r_col = f"{bugid}_R"
+    t_col = f"{bugid}_T"
+    
+    if r_col in df.columns:
+        R = df[df[r_col] > 0]
         if not R.empty:
-            reached[bug] = int(R.index[0])
-        T = df[df[f"{bug}_T"] > 0]
+            reached[bugid] = int(R.index[0])
+    
+    if t_col in df.columns:
+        T = df[df[t_col] > 0]
         if not T.empty:
-            triggered[bug] = int(T.index[0])
+            triggered[bugid] = int(T.index[0])
+    
     return reached, triggered
 
 def default_to_regular(d):
@@ -214,12 +218,13 @@ def get_experiment_summary(experiment):
     for fuzzer, f_data in experiment.items():
         for target, t_data in f_data.items():
             for program, p_data in t_data.items():
-                for run, df in p_data.items():
-                    reached, triggered = get_ttb_from_df(df)
-                    summary[fuzzer][target][program][run] = {
-                        "reached": reached,
-                        "triggered": triggered
-                    }
+                for bugid, b_data in p_data.items():
+                    for run, df in b_data.items():
+                        reached, triggered = get_ttb_from_df(df, bugid)
+                        summary[fuzzer][target][program][bugid][run] = {
+                            "reached": reached,
+                            "triggered": triggered
+                        }
     return default_to_regular(summary)
 
 def configure_verbosity(level):
