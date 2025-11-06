@@ -98,7 +98,7 @@ tmux paste-buffer -t "$SESSION"
 sleep 3
 tmux send-keys -t "$SESSION" C-m
 
-KEYWORDS="Generating|Reading|Running|Calling|Updating|Grepping|Summarizing|fuzz|workflow_state.md"
+KEYWORDS="Generating|Reading|Running|Calling|Updating|Grepping|Summarizing|workflow_state.md"
 CRASH_DIR="$SHARED/findings/crashes"
 TIMEOUT=1500
 END=$(($(date +%s) + TIMEOUT))
