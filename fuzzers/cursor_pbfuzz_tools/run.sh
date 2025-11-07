@@ -60,4 +60,33 @@ python3 "${FUZZER}/repo/launcher.py" -baseline \
     -- "$OUT/clang_bc/$TARGET_NAME/$PROGRAM" $ARGS
 
 cd "$TARGET/repo"
+
+SESSION="cursor_session"
+AGENT_LOG_FILE="$SHARED/findings/agent.log"
+
+tmux new-session -d -s "$SESSION" "cursor-agent --force --model ${LLM_MODEL}"
+sleep 3
+
+OUTPUT="$(tmux capture-pane -t "$SESSION" -p -S -0)"
+if echo "$OUTPUT" | grep -q "Workspace Trust Required"; then
+    tmux send-keys -t "$SESSION" "a"
+    sleep 3
+fi
+
+OUTPUT="$(tmux capture-pane -t "$SESSION" -p -S -0)"
+if echo "$OUTPUT" | grep -q "MCP Server Approval Required"; then
+    # Approve MCP servers
+    tmux send-keys -t "$SESSION" "a"
+    sleep 3
+fi
+
+OUTPUT="$(tmux capture-pane -t "$SESSION" -p -S -100)"
+if ! (echo "$OUTPUT" | grep -q "Cursor Agent"); then
+    exit 1
+fi
+
+tmux send-keys -t "$SESSION" C-c
+tmux send-keys -t "$SESSION" C-d
+tmux kill-session -t "$SESSION" || true
+
 cursor-agent --force --model "${LLM_MODEL}" --output-format stream-json -p "$(cat $SHARED/findings/prompt.txt)" &> $SHARED/findings/agent.log
