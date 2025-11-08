@@ -46,8 +46,9 @@ TARGET_TO_PROJECT = {
 
 # -------- Fuzzer Mapping --------
 FUZZER_MAPPING = {
-    'PBFuzz-sonnet-4.5': 'pbfuzz',
-    'cursor-sonnet-4.5': 'cursor_cli'
+    'PBFuzz': 'pbfuzz',
+    'cursor': 'cursor_cli',
+    'cursor-tools': 'cursor_pbfuzz_tools'
 }
 
 def extract_project_from_target(target: Union[str, None]) -> str:
@@ -96,14 +97,18 @@ def create_empty_excel_from_json(json_df: pd.DataFrame) -> pd.DataFrame:
     columns = [
         ('Program', 'Unnamed: 0_level_1'),
         ('BUG_ID', 'Unnamed: 1_level_1'),
-        ('PBFuzz-sonnet-4.5', 'R'),
-        ('PBFuzz-sonnet-4.5', 'TTR'),
-        ('PBFuzz-sonnet-4.5', 'T'),
-        ('PBFuzz-sonnet-4.5', 'TTE'),
-        ('cursor-sonnet-4.5', 'R'),
-        ('cursor-sonnet-4.5', 'TTR'),
-        ('cursor-sonnet-4.5', 'T'),
-        ('cursor-sonnet-4.5', 'TTE')
+        ('PBFuzz', 'R'),
+        ('PBFuzz', 'TTR'),
+        ('PBFuzz', 'T'),
+        ('PBFuzz', 'TTE'),
+        ('cursor', 'R'),
+        ('cursor', 'TTR'),
+        ('cursor', 'T'),
+        ('cursor', 'TTE'),
+        ('cursor-tools', 'R'),
+        ('cursor-tools', 'TTR'),
+        ('cursor-tools', 'T'),
+        ('cursor-tools', 'TTE')
     ]
     
     # Create empty DataFrame with multi-level columns
@@ -129,7 +134,7 @@ def find_missing_rows(excel_df: pd.DataFrame, json_df: pd.DataFrame) -> pd.DataF
             project = extract_project_from_target(current_target)
             
             # Check both fuzzers
-            for fuzzer in ['pbfuzz', 'cursor_cli']:
+            for fuzzer in ['pbfuzz', 'cursor_cli', 'cursor_pbfuzz_tools']:
                 excel_keys.add((fuzzer, project, current_target, bug_id))
     
     # Get all combinations from JSON
@@ -395,7 +400,7 @@ def find_extra_rows(excel_df: pd.DataFrame, json_df: pd.DataFrame) -> pd.DataFra
             project = extract_project_from_target(current_target)
             
             # Check both fuzzers
-            for fuzzer in ['pbfuzz', 'cursor_cli']:
+            for fuzzer in ['pbfuzz', 'cursor_cli', 'cursor_pbfuzz_tools']:
                 excel_keys.add((fuzzer, project, current_target, bug_id))
     
     # Find extra combinations
@@ -417,7 +422,7 @@ def find_extra_rows(excel_df: pd.DataFrame, json_df: pd.DataFrame) -> pd.DataFra
             project = extract_project_from_target(current_target)
             
             # Check if this combination is extra
-            for fuzzer in ['pbfuzz', 'cursor_cli']:
+            for fuzzer in ['pbfuzz', 'cursor_cli', 'cursor_pbfuzz_tools']:
                 if (fuzzer, project, current_target, bug_id) in extra_keys:
                     extra_rows.append({
                         'fuzzer': fuzzer,
@@ -532,13 +537,6 @@ def main():
     print(f"Cells filled:   {len(audit_filled)}")
     print(f"Mismatches:     {len(audit_mismatch)} rows{' (fixed)' if args.fix_mismatches else ''}")
     print(f"Extra rows:     {len(audit_extra)} rows")
-    
-    # Check pbfuzz/php/json completeness
-    pbfuzz_json_bugs = set(json_df[(json_df['fuzzer'] == 'pbfuzz') & (json_df['project'] == 'php') & (json_df['target'] == 'json')]['bug'])
-    if pbfuzz_json_bugs:
-        print(f"pbfuzz/php/json bugs in JSON: {', '.join(sorted(pbfuzz_json_bugs))}")
-    else:
-        print("No pbfuzz/php/json data found in JSON")
 
 if __name__ == "__main__":
     main()
