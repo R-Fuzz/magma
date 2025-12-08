@@ -15,11 +15,7 @@ fi
 
 cd "$TARGET/repo"
 ./autogen.sh
-./configure --disable-shared --enable-ossfuzzers \
-    --disable-sqlite \
-    --disable-alsa \
-    --disable-external-libs \
-    --disable-mpeg
+./configure --disable-shared --enable-ossfuzzers
 make -j$(nproc) clean
 make -j$(nproc) ossfuzz/sndfile_fuzzer
 
