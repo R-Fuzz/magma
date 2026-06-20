@@ -19,17 +19,6 @@ ARGS=${ARGS:-"@@"}
 export PATH=/usr/lib/llvm-20/bin:$PATH
 export PATH="$HOME/.local/bin:$PATH"
 
-extract_progress() {                # input: block of text
-    printf '%s' "$1" | grep -oE '[0-9]+(\.[0-9]+)?%' | head -n1
-}
-
-percent_gt() {                      # args: VALUE% THRESHOLD%
-    local v="$1" t="$2"
-    [ -n "$v" ] || return 1
-    v="${v%\%}"; t="${t%\%}"
-    awk -v a="$v" -v b="$t" 'BEGIN{ exit (a>b)?0:1 }'
-}
-
 if [ -d "${OUT}/BBtargets/${BUGID}" ]; then
     pushd "${OUT}/BBtargets/${BUGID}"
     cp "${PROGRAM}_policy.txt" "policy.txt" || true
@@ -42,107 +31,64 @@ if [ -d "${OUT}/BBtargets/${BUGID}" ]; then
     popd
 fi
 
-cd "${FUZZER}/repo"
-git fetch --all
-git reset --hard origin/cursor
-if [ -n "$COMMIT" ]; then
-    git checkout "$COMMIT"
+# Derive the cursor-agent session timeout from Magma's campaign $TIMEOUT so the
+# launcher self-terminates cursor-agent cleanly before Magma's outer
+# `timeout $TIMEOUT` (in magma/run.sh) hard-kills this script.
+to_seconds() {                      # arg: duration with optional s/m/h/d suffix
+    local t="$1" n unit
+    n="${t%[smhd]}"
+    unit="${t#$n}"
+    case "$unit" in
+        s|"") echo "$n" ;;
+        m)    echo "$((n * 60))" ;;
+        h)    echo "$((n * 3600))" ;;
+        d)    echo "$((n * 86400))" ;;
+        *)    echo "$n" ;;
+    esac
+}
+
+AGENT_TIMEOUT=3600
+if [ -n "$TIMEOUT" ]; then
+    TIMEOUT_S="$(to_seconds "$TIMEOUT")"
+    if [ "$TIMEOUT_S" -gt 60 ]; then
+        AGENT_TIMEOUT=$((TIMEOUT_S - 30))
+    else
+        AGENT_TIMEOUT="$TIMEOUT_S"
+    fi
 fi
 
 TARGET_NAME="$(basename "$TARGET")"
+
+# launcher.py generates the prompt + .cursor/mcp.json and drives cursor-agent
+# non-interactively (cursor-agent --force -p). MCP/trust auto-approval is handled
+# by the prebuilt ~/.cursor/cli-config.json permission allowlist. cursor auth is
+# installed by launcher.py from the CURSOR_AUTH env var.
 python3 "${FUZZER}/repo/launcher.py" \
     -s "${OUT}/BBtargets/${BUGID}" \
     -m "${LLM_MODEL}" \
     -c "$TARGET/repo" \
     -i "$TARGET/corpus/${PROGRAM}" \
     -o "$SHARED/findings" \
+    -agent-timeout-sec "$AGENT_TIMEOUT" \
     -reached-pattern "Bug ${BUGID} reached" \
     -triggered-pattern "Bug ${BUGID} triggered" \
     -- "$OUT/clang_bc/$TARGET_NAME/$PROGRAM" $ARGS
 
-# Start new detached tmux session running cursor-agent
-# cursor cli tool does not support auto-approval of mcp servers in non-interactive mode
-# This is an ugly workaround hopefully the newer cursor versions will support it
-SESSION="cursor_session"
-PROMPT_FILE="$SHARED/findings/prompt.txt"
-AGENT_LOG_FILE="$SHARED/findings/agent.log"
+# Persist the generated workflow/MCP artifacts for post-mortem inspection.
+mkdir -p "$SHARED/findings/.cursor"
+cp "$TARGET/repo/.cursor/mcp.json" "$SHARED/findings/.cursor" 2>/dev/null || true
+cp "$TARGET/repo/.cursor/project_config.md" "$SHARED/findings/.cursor" 2>/dev/null || true
+cp "$TARGET/repo/.cursor/workflow_state.md" "$SHARED/findings/.cursor" 2>/dev/null || true
 
-SRC_DIR="$TARGET/repo/"
-cd "$SRC_DIR"
-
-tmux new-session -d -s "$SESSION" "cursor-agent --force --model ${LLM_MODEL}"
-sleep 3
-
-OUTPUT="$(tmux capture-pane -t "$SESSION" -p -S -0)"
-if echo "$OUTPUT" | grep -q "Workspace Trust Required"; then
-    tmux send-keys -t "$SESSION" "a"
-    sleep 3
-fi
-
-OUTPUT="$(tmux capture-pane -t "$SESSION" -p -S -0)"
-if echo "$OUTPUT" | grep -q "MCP Server Approval Required"; then
-    # Approve MCP servers
-    tmux send-keys -t "$SESSION" "a"
-    sleep 3
-fi
-
-OUTPUT="$(tmux capture-pane -t "$SESSION" -p -S -100)"
-if ! (echo "$OUTPUT" | grep -q "Cursor Agent"); then
-    exit 1
-fi
-
-# Load prompt.txt into buffer and paste it once, then press Enter
-tmux load-buffer /dev/null
-tmux load-buffer "$PROMPT_FILE"
-tmux paste-buffer -t "$SESSION"
-sleep 3
-tmux send-keys -t "$SESSION" C-m
-
-KEYWORDS="Generating|Reading|Running|Calling|Updating|Grepping|Summarizing|workflow_state.md"
+# If a PoC was found, replay it so Magma's monitor records the triggered bug.
 CRASH_DIR="$SHARED/findings/crashes"
-TIMEOUT=1500
-END=$(($(date +%s) + TIMEOUT))
-
-sleep 60
-while [ "$(date +%s)" -lt "$END" ]; do
-    LAST9="$(tmux capture-pane -t "$SESSION" -p -S 0 | tail -n 9)"
-    if ! echo "$LAST9" | grep -E -q "$KEYWORDS"; then
-        sleep 5
-        if percent_gt "$(extract_progress "$LAST9")" "70%"; then
-            tmux send-keys -t "$SESSION" "/compress"
-            tmux send-keys -t "$SESSION" C-m
-            sleep 20
-        fi
-        LAST11="$(tmux capture-pane -t "$SESSION" -p -S 0 | tail -n 11)"
-        if ! echo "$LAST11" | grep -E -q "$KEYWORDS"; then
-            if [ ! -d "$CRASH_DIR" ] || [ -z "$(ls -A "$CRASH_DIR" 2>/dev/null)" ]; then
-                tmux send-keys -t "$SESSION" "Do not give up. Read workflow_state.md and continue."
-                tmux send-keys -t "$SESSION" C-m
-            else
-                echo "PoC found, stopping the agent."
-                break
-            fi
-        fi
-    fi
-    sleep 10
-done
-
-tmux capture-pane -t "$SESSION" -p -S -5000 > "$AGENT_LOG_FILE"
-sleep 3
-cp -r "$HOME/.cursor" "$SHARED/findings" || true
-cp "$TARGET/repo/.cursor/mcp.json" "$SHARED/findings/.cursor" || true
-cp "$TARGET/repo/.cursor/project_config.md" "$SHARED/findings/.cursor" || true
-cp "$TARGET/repo/.cursor/workflow_state.md" "$SHARED/findings/.cursor" || true
-
-# If PoC found, make sure magma records it
 if [ -d "$CRASH_DIR" ] && [ -n "$(ls -A "$CRASH_DIR" 2>/dev/null)" ]; then
     for f in "$CRASH_DIR"/*; do
-        RUNARGS="${f} ${ARGS//@@/$f}"
-        "$OUT/clang_bc/$TARGET_NAME/$PROGRAM" $RUNARGS
+        RUNARGS="${ARGS//@@/$f}"
+        if [ "$RUNARGS" = "$ARGS" ]; then
+            RUNARGS="$f"
+        fi
+        "$OUT/clang_bc/$TARGET_NAME/$PROGRAM" $RUNARGS || true
     done
     sleep 5
 fi
-
-tmux send-keys -t "$SESSION" C-c
-tmux send-keys -t "$SESSION" C-d
-tmux kill-session -t "$SESSION" || true

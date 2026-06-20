@@ -27,5 +27,6 @@ if [ -z "$args" ]; then
     args="'$1'"
 fi
 
+TARGET_NAME="$(basename "$TARGET")"
 timeout -s KILL --preserve-status $TIMELIMIT bash -c \
-    "run_limited '$OUT/clang_bc/$BUGID/$PROGRAM' $args"
+    "run_limited '$OUT/clang_bc/$TARGET_NAME/$PROGRAM' $args"

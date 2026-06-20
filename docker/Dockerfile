@@ -29,7 +29,11 @@ ARG GROUP_ID=1000
 ENV USERID=${USER_ID}
 ENV GROUPID=${GROUP_ID}
 RUN mkdir -p /home && \
-	groupadd -g ${GROUPID} magma && \
+	if getent group ${GROUPID} >/dev/null; then \
+		groupmod -n magma "$(getent group ${GROUPID} | cut -d: -f1)"; \
+	else \
+		groupadd -g ${GROUPID} magma; \
+	fi && \
 	useradd -l -u ${USERID} -K UMASK=0000 -d /home -g magma magma && \
 	chown magma:magma /home
 RUN echo "magma:magma" | chpasswd && usermod -a -G sudo magma
@@ -67,7 +71,6 @@ RUN ${FUZZER}/preinstall.sh
 USER magma:magma
 
 # Fetch fuzzer
-ARG GITHUB_TOKEN
 COPY --chown=magma:magma ${magma_root}/${fuzzer_path}/fetch.sh ${FUZZER}
 COPY --chown=magma:magma ${magma_root}/${fuzzer_path}/src ${FUZZER}/src
 RUN ${FUZZER}/fetch.sh

@@ -65,3 +65,29 @@ build_static_analyzer
 $FUZZER/cursor_install.sh
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> /home/.bashrc
 echo 'export PATH=/usr/lib/llvm-20/bin:$PATH' >> /home/.bashrc
+
+# Prepare cursor CLI permission allowlist so cursor-agent auto-approves shell,
+# file, web, and all pbfuzz MCP servers in non-interactive (-p --force) mode.
+# Global config lives at ~/.cursor/cli-config.json (HOME=/home for user magma).
+mkdir -p "$HOME/.cursor"
+cat > "$HOME/.cursor/cli-config.json" <<'EOF'
+{
+  "version": 1,
+  "editor": { "vimMode": false },
+  "permissions": {
+    "allow": [
+      "Shell(*)",
+      "Read(**)",
+      "Write(**)",
+      "WebFetch(*)",
+      "Mcp(callgraph:*)",
+      "Mcp(corpus:*)",
+      "Mcp(fuzzer:*)",
+      "Mcp(deviation_detector:*)",
+      "Mcp(gdb:*)",
+      "Mcp(workflow:*)"
+    ],
+    "deny": []
+  }
+}
+EOF

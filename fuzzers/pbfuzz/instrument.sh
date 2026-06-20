@@ -11,7 +11,8 @@ set -e
 ##
 
 
-SKIP_STATIC_ANALYSIS=1
+SKIP_STATIC_ANALYSIS="${SKIP_STATIC_ANALYSIS:-1}"
+SKIP_BUILD_BITCODE="${SKIP_BUILD_BITCODE:-0}"
 # These bug IDs are verified to be statically not reachable from interprocedural whole program CFG.
 blacklist=(
     "PNG002"                                     \
@@ -93,7 +94,7 @@ static_analyze() {(
     # Reuse pre-built clang bitcode files for consistent analysis results.
     if [[ $REUSE_PREBUILT_BC -eq 1 ]]; then
         echo "Reusing pre-built BBtargets for $TARGET_NAME"
-        rm -rf "$OUT/clang_bc/*"
+        rm -rf "${OUT}/clang_bc"/*
         cp -r "$FUZZER/pre-built/${TARGET_NAME}/clang_bc" "$OUT/"
     fi
 
@@ -117,7 +118,7 @@ static_analyze() {(
             OUT="${OUT}/BBtargets/${BUG_ID}"
             rm -rf $OUT || true
             mkdir -p $OUT
-            if ! grep "MAGMA_LOG(\"${BUG_ID}" "$SRC_DIR" -nR | \
+            if ! grep "MAGMA_LOG(\"${BUG_ID}" "$SRC_DIR" -nR --include='*.c' --include='*.h' --include='*.cc' --include='*.cpp' | \
                 awk -F: '{print $1":"$2}' | sed 's/.*\///' \
                 > $OUT/BBtargets.txt; then
                 echo "Error: Failed to find MAGMA_LOG for BUG_ID: $BUG_ID" >&2
@@ -162,7 +163,9 @@ static_analyze() {(
     fi
 )}
 
-build_bitcode
+if [[ $SKIP_BUILD_BITCODE -eq 0 ]]; then
+    build_bitcode
+fi
 if [[ $SKIP_STATIC_ANALYSIS -eq 0 ]]; then
     static_analyze
 else

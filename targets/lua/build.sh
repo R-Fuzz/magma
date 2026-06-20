@@ -15,6 +15,13 @@ fi
 
 # build lua library
 cd "$TARGET/repo"
+
+# Do not hardcodes -march=native, which fails in cross-platform
+# container environments (e.g. Apple Silicon running amd64 via Rosetta 2,
+# or any environment where clang cannot probe the host CPU via CPUID).
+# Override with a safe generic baseline that runs on any x86-64 host.
+sed -i 's/-march=native/-march=x86-64/g' makefile Makefile 2>/dev/null || true
+
 make -j$(nproc) clean
 make -j$(nproc) liblua.a
 

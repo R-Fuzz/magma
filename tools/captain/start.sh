@@ -65,10 +65,8 @@ if [ -t 1 ]; then
         --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
         --env=PROGRAM="$PROGRAM" --env=ARGS="$ARGS" \
         --env=FUZZARGS="$FUZZARGS" --env=POLL="$POLL" --env=TIMEOUT="$TIMEOUT" \
-        --env=BUGID="$BUGID" --env=OPENAI_API_KEY="$OPENAI_API_KEY"  \
-        --env=GOOGLE_API_KEY="$GOOGLE_API_KEY" --env=ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
-        --env=GITHUB_TOKEN="$GITHUB_TOKEN" \
-        -v $HOME/.config/cursor:/home/.config/cursor \
+        --env=BUGID="$BUGID" \
+        --env=CURSOR_AUTH="$CURSOR_AUTH" \
         $LLM_ENV $NETWORK_ACCESS \
         $flag_aff $flag_ep "$IMG_NAME"
 else
@@ -77,10 +75,8 @@ else
         --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
         --env=PROGRAM="$PROGRAM" --env=ARGS="$ARGS" \
         --env=FUZZARGS="$FUZZARGS" --env=POLL="$POLL" --env=TIMEOUT="$TIMEOUT" \
-        --env=BUGID="$BUGID" --env=OPENAI_API_KEY="$OPENAI_API_KEY"  \
-        --env=GOOGLE_API_KEY="$GOOGLE_API_KEY" --env=ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
-        --env=GITHUB_TOKEN="$GITHUB_TOKEN" \
-        -v $HOME/.config/cursor:/home/.config/cursor \
+        --env=BUGID="$BUGID" \
+        --env=CURSOR_AUTH="$CURSOR_AUTH" \
         $LLM_ENV $NETWORK_ACCESS \
         $flag_aff $flag_ep "$IMG_NAME"
     )
