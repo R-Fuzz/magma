@@ -1,0 +1,7 @@
+# Written per run by symsan's tools/magma/campaign.sh: instrumentrc carries
+# that invocation's --build-line arguments, and the stamps record which
+# arguments each image was built from so --no-rebuild can refuse a mismatch.
+# Both describe one machine's last run, not the pipeline.  instrumentrc.example
+# is the documented form and is tracked.
+instrumentrc
+.image-stamp-*

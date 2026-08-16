@@ -1,0 +1,4 @@
+fun:readline=uninstrumented
+fun:readline=discard
+fun:add_history=uninstrumented
+fun:add_history=discard

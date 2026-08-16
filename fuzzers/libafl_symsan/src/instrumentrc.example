@@ -1,0 +1,43 @@
+# Build-time options for instrument.sh and fetch.sh.  Copy to
+# src/instrumentrc -- without the .example -- and rebuild the image; the file
+# is sourced as bash, inside the container, before either script decides
+# anything.
+#
+# It exists because captain forwards a fixed set of --build-args and this
+# fuzzer would otherwise need a change to the shared docker/Dockerfile to be
+# told anything at build time.
+
+# Which branch of github.com/r-fuzz/symsan fetch.sh clones.  campaign.sh writes
+# this from --branch; set by hand only when running fetch.sh/build.sh outside
+# of campaign.sh.
+#SYMSAN_BRANCH=main
+
+# Build the coverage side with afl-clang-lto and AFL_LLVM_DOCUMENT_IDS, and
+# both sides with -g, so symsan-fuzz can join SymSan's branch ids to AFL++'s
+# edge ids and skip solving branches the fuzzer has already covered.
+#
+# Off by default.  It needs LTO, debug info on both builds, and a map named
+# <executable>.map, and it degrades *silently* without any of them: a wrong map
+# reports a high mapped-branch ratio while telling the concolic stage that
+# everything is already covered.  Turn it on deliberately, then audit it with
+# covcheck and --validate-branch-map (see bindings/rust/README.md).
+#
+# Refused outright on targets that build more than one program -- LTO numbers
+# edges per link, so one document-ids file cannot describe two of them.
+#USE_BRANCH_MAP=1
+
+# Skip the cmplog build.  The baseline arm costs one extra build and nothing at
+# run time if unused, so the default is on.
+#USE_CMPLOG=0
+
+# Skip the concolic build, giving the havoc floor: LibAFL's scheduler and
+# mutators over the coverage build, with no extra stage.  Set USE_CMPLOG=0 too
+# for a bare floor, or leave it on for cmplog-only.
+#
+# Unlike the other two this changes what run.sh is *allowed* to do, so it also
+# leaves $OUT/no_symsan in the image: a missing concolic binary is otherwise
+# indistinguishable from a build that failed, and run.sh refuses to start rather
+# than measure the floor under the name of the symsan arm.
+#
+# Incompatible with USE_BRANCH_MAP, whose only consumer is the concolic stage.
+#USE_SYMSAN=0
